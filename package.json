@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "description": "Decision memory for Atlassian teams, built on Atlassian Forge.",
-  "type": "module",
   "license": "MIT",
   "engines": {
     "node": ">=20"

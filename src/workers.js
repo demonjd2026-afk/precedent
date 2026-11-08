@@ -14,6 +14,15 @@ import { checkEvidenceDrift, markStale, runSweep } from './engine/staleness.js';
 import { syncDecisionToGraph } from './connector.js';
 import { log } from './lib/log.js';
 
+/**
+ * @forge/events v3 wraps pushed data as { body }. Accept either shape so a
+ * platform change in delivery cannot silently drop every event.
+ */
+function eventBody(payload) {
+  if (payload && typeof payload.body === 'object' && payload.body !== null) return payload.body;
+  return payload ?? {};
+}
+
 // ---------------------------------------------------------------------------
 // Capture worker
 // ---------------------------------------------------------------------------
@@ -29,7 +38,7 @@ captureResolver.define('capture-event', async ({ payload }) => {
     authorId,
     occurredAt,
     triageScore,
-  } = payload ?? {};
+  } = eventBody(payload);
 
   if (!text || !sourceId) {
     log.warn('capture event missing required fields', { sourceId });
@@ -80,7 +89,7 @@ export const captureWorker = captureResolver.getDefinitions();
 const driftResolver = new Resolver();
 
 driftResolver.define('drift-event', async ({ payload }) => {
-  const { decisionIds = [], sourceId } = payload ?? {};
+  const { decisionIds = [], sourceId } = eventBody(payload);
   let flagged = 0;
 
   for (const id of decisionIds) {

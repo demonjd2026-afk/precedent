@@ -54,7 +54,7 @@ export async function onJiraActivity(event) {
     // An edit to cited text matters even when the new text contains no decision.
     const citing = await listCitingSource(sourceId);
     if (citing.length > 0) {
-      await driftQueue.push({ sourceId, sourceType, decisionIds: citing.map((d) => d.id) });
+      await driftQueue.push({ body: { sourceId, sourceType, decisionIds: citing.map((d) => d.id) } });
       log.info('queued drift check', { sourceId, decisions: citing.length });
     }
 
@@ -66,15 +66,17 @@ export async function onJiraActivity(event) {
     }
 
     await captureQueue.push({
-      text,
-      sourceType,
-      sourceId,
-      issueKey,
-      url: buildJiraUrl(event, issueKey, comment?.id),
-      scopeKey: projectKeyFrom(issueKey),
-      authorId: isComment ? comment?.author?.accountId : event?.atlassianId,
-      occurredAt: isComment ? comment?.created : event?.timestamp,
-      triageScore: gate.score,
+      body: {
+        text,
+        sourceType,
+        sourceId,
+        issueKey,
+        url: buildJiraUrl(event, issueKey, comment?.id),
+        scopeKey: projectKeyFrom(issueKey),
+        authorId: isComment ? comment?.author?.accountId : event?.atlassianId,
+        occurredAt: isComment ? comment?.created : event?.timestamp,
+        triageScore: gate.score,
+      },
     });
 
     log.info('queued capture', { sourceId, score: gate.score.toFixed(2) });
