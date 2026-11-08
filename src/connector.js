@@ -13,9 +13,14 @@
  *    appeared in a search result, which is precisely the failure mode this
  *    product exists to prevent.
  *
- *  - Permissions are replicated from the scope. A decision about a private
- *    project should not surface to the whole workspace, so access controls
- *    mirror the container rather than defaulting to ATLASSIAN_WORKSPACE.
+ *  - Synced decisions are visible to everyone in the workspace. The graph only
+ *    accepts container-scoped permissions on objects that point at a container
+ *    the connector has itself ingested, with that container's own permission
+ *    list. Precedent does not mirror Jira project permissions into the graph,
+ *    so it does not pretend to: the manifest declares
+ *    `replicatesPermissions: false`, which Atlassian shows to admins before
+ *    they enable the connector. The in-app register and panels still read
+ *    through Jira's own permissions.
  *
  * Compliance note: the connector module's terms forbid ingesting emails,
  * calendar entries, meeting recordings, HRIS data, and regulated financial or
@@ -26,12 +31,11 @@
  */
 
 import { graph, types } from '@forge/teamwork-graph';
-import { STATUS, describeStatus } from './lib/model.js';
+import { toGraphObject, OBJECT_TYPE } from './lib/graph-object.js';
+import { STATUS } from './lib/model.js';
 import { getConnection, setConnection, clearConnection, listByStatus } from './lib/store.js';
 import { log } from './lib/log.js';
 
-const SCHEMA_VERSION = '1.0';
-const OBJECT_TYPE = 'atlassian:document';
 
 /**
  * Connection lifecycle. Atlassian calls this when an admin connects, edits or
@@ -96,13 +100,15 @@ export async function backfill(connectionId) {
 
     // Do not ignore ingestion errors. A silently rejected object is a decision
     // that will never show up in search, and nobody will notice for months.
+    // Count from the per-object results even when the batch failed, or a fully
+    // rejected batch reports "0 rejected".
+    const accepted = response.results?.accepted?.length ?? 0;
+    const bad = response.results?.rejected ?? [];
+    ingested += accepted;
+    rejected += bad.length || (response.success ? 0 : slice.length - accepted);
     if (!response.success) {
       log.error('graph ingestion failed', { error: response.error, batch: i / BATCH });
-      continue;
     }
-    ingested += response.results?.accepted?.length ?? 0;
-    const bad = response.results?.rejected ?? [];
-    rejected += bad.length;
     for (const r of bad.slice(0, 3)) {
       log.warn('graph rejected object', {
         id: JSON.stringify(r.key?.entityId),
@@ -178,72 +184,4 @@ export async function removeDecisionFromGraph(decisionId) {
   return { removed: response.success };
 }
 
-/**
- * Map a decision record onto the graph's document shape.
- *
- * The searchable text is assembled so that the things people actually search
- * for — the rejected option, the assumption, the status — are all present in
- * the indexed body, not just the title.
- *
- * @param {import('./lib/model.js').DecisionRecord} d
- * @returns {import('@forge/teamwork-graph').types.DocumentObject}
- */
-export function toGraphObject(d) {
-  const body = [
-    d.statement,
-    (d.rejected ?? []).length ? `Rejected alternatives: ${d.rejected.join('; ')}.` : '',
-    (d.assumptions ?? []).length
-      ? `Assumes: ${d.assumptions.map((a) => a.text).join('; ')}.`
-      : '',
-    `Status: ${describeStatus(d)}.`,
-    d.staleDetail ? `Needs review: ${d.staleDetail}` : '',
-    d.supersededBy ? `Superseded by ${d.supersededBy}.` : '',
-    `Scope: ${d.scopeKey}.`,
-  ]
-    .filter(Boolean)
-    .join('\n');
-
-  const sourceUrl = d.evidence?.[0]?.url ?? '';
-
-  return {
-    schemaVersion: SCHEMA_VERSION,
-    id: d.id,
-    // The graph uses this to detect out-of-order updates. Decision records are
-    // low-churn, so a second-resolution timestamp is a safe monotonic source.
-    updateSequenceNumber: Math.floor(new Date(d.updatedAt).getTime() / 1000),
-    displayName: `${d.id}: ${d.title}`,
-    description: d.statement?.slice(0, 500),
-    url: sourceUrl,
-    createdAt: d.createdAt,
-    lastUpdatedAt: d.updatedAt,
-    createdBy: d.deciders?.[0] ? { accountId: d.deciders[0], externalId: d.deciders[0] } : undefined,
-    permissions: [
-      {
-        accessControls: [
-          {
-            principals: [
-              // Mirror the container rather than exposing every decision to the
-              // whole workspace. CONTAINER resolves to the project or space the
-              // decision is scoped to.
-              d.scopeKey && d.scopeKey !== 'UNSCOPED' && d.scopeKey !== 'GLOBAL'
-                ? { type: 'CONTAINER', id: d.scopeKey }
-                : { type: 'ATLASSIAN_WORKSPACE' },
-            ],
-          },
-        ],
-      },
-    ],
-    [OBJECT_TYPE]: {
-      type: {
-        category: 'DOCUMENT',
-        mimeType: 'text/plain',
-      },
-      content: {
-        mimeType: 'text/plain',
-        text: body,
-      },
-      extractedText: body,
-      labels: ['decision', d.status, ...(d.tags ?? [])],
-    },
-  };
-}
+export { toGraphObject };

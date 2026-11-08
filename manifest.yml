@@ -319,7 +319,9 @@ modules:
     - key: precedent-decisions
       name: Precedent
       capabilities:
-        replicatesPermissions: true
+        # Truthful declaration, shown to admins before they enable the
+        # connector: synced decisions are visible across the workspace.
+        replicatesPermissions: false
         syncFidelity: mirror
         supportsIncrementalSync: true
       icons:
