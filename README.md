@@ -92,6 +92,8 @@ Alongside the tuning sets sits a **held-out hard set** (`*-hard.json`) written a
 
 The datasets include deliberate traps: comments that use decision words without settling anything ("has anyone decided…?", "if we decided to…", "as decided in DR-4"), and proposals that share vocabulary with a decision without conflicting with it.
 
+Latest results, including what they do not show: [docs/EVALUATION.md](docs/EVALUATION.md).
+
 **Offline** (no model, runs anywhere, part of `npm test`): the triage gate against the dataset, plus unit tests proving the scorer computes what it claims.
 
 ```bash

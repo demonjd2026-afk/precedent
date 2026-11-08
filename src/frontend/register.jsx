@@ -16,6 +16,7 @@ import ForgeReconciler, {
   Inline,
   Lozenge,
   SectionMessage,
+  Select,
   Spinner,
   Stack,
   Strong,
@@ -135,6 +136,117 @@ function Health() {
   );
 }
 
+
+// ---------------------------------------------------------------------------
+// Sample data — the first thing a new visitor on an empty site sees
+// ---------------------------------------------------------------------------
+
+const BUSY = ['queued', 'loading', 'removing'];
+
+function SampleData({ onChange }) {
+  const [state, setState] = useState(null);
+  const [projects, setProjects] = useState([]);
+  const [project, setProject] = useState(null);
+  const [error, setError] = useState(null);
+
+  const refresh = async () => {
+    const next = await invoke('seedStatus');
+    setState((prev) => {
+      // Tell the register to reload once a job finishes.
+      if (prev && BUSY.includes(prev.status) && !BUSY.includes(next.status)) onChange();
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    refresh();
+    invoke('listProjects').then((r) => {
+      setProjects(r.projects ?? []);
+      if (r.error) setError(r.error);
+    });
+  }, []);
+
+  const busy = state && BUSY.includes(state.status);
+  useEffect(() => {
+    if (!busy) return undefined;
+    const timer = setInterval(refresh, 3000);
+    return () => clearInterval(timer);
+  }, [busy]);
+
+  const act = async (kind) => {
+    setError(null);
+    const res = kind === 'load'
+      ? await invoke('loadSample', { projectKey: project?.value })
+      : await invoke('removeSample');
+    if (res?.error) setError(res.error);
+    else refresh();
+  };
+
+  if (!state) return null;
+
+  if (busy) {
+    return (
+      <SectionMessage appearance="information" title={state.status === 'removing' ? 'Removing sample data' : 'Loading sample data'}>
+        <Inline space="space.100" alignBlock="center">
+          <Spinner size="small" />
+          <Text>{state.progress ?? 'Queued'}</Text>
+        </Inline>
+      </SectionMessage>
+    );
+  }
+
+  if (state.status === 'loaded') {
+    const bait = (state.issues ?? []).filter((i) => i.ref.startsWith('bait')).map((i) => i.key);
+    const proposal = (state.issues ?? []).find((i) => i.ref === 'cadence')?.key;
+    return (
+      <SectionMessage appearance="success" title={`Sample data loaded in ${state.projectKey}`}>
+        <Stack space="space.100">
+          <Text>
+            {state.issues.length} work items and {state.decisionIds.length} decisions, one of them
+            already flagged for review because the assumption it rests on has expired.
+          </Text>
+          {proposal && <Text>To try confirming a decision: open <Strong>{proposal}</Strong> and its Precedent panel.</Text>}
+          {bait.length > 0 && <Text>To try the conflict check: open <Strong>{bait.join(' or ')}</Strong> and press “Check this issue”.</Text>}
+          <Inline><Button appearance="subtle" onClick={() => act('remove')}>Remove sample data</Button></Inline>
+          {error && <Text><Em>{error}</Em></Text>}
+        </Stack>
+      </SectionMessage>
+    );
+  }
+
+  if (state.status === 'failed') {
+    return (
+      <SectionMessage appearance="error" title="Sample data did not finish">
+        <Stack space="space.100">
+          <Text>{state.error}</Text>
+          <Text>Anything that was created can be cleaned up.</Text>
+          <Inline><Button onClick={() => act('remove')}>Remove what was created</Button></Inline>
+        </Stack>
+      </SectionMessage>
+    );
+  }
+
+  const options = projects.map((p) => ({ label: `${p.name} (${p.key})`, value: p.key }));
+  return (
+    <SectionMessage appearance="discovery" title="See Precedent with sample data">
+      <Stack space="space.150">
+        <Text>
+          Adds eight work items to a project you choose, with comments recording real-looking decisions:
+          four binding, one awaiting your confirmation, one flagged for review, and two proposals that
+          contradict earlier decisions. Everything is labelled {'“precedent-sample”'} and can be removed in one click.
+        </Text>
+        <Inline space="space.100" alignBlock="center">
+          <Box xcss={xcss({ minWidth: '280px' })}>
+            <Select options={options} value={project} onChange={setProject}
+                    placeholder={projects.length ? 'Choose a project' : 'No projects available'} />
+          </Box>
+          <Button appearance="primary" isDisabled={!project} onClick={() => act('load')}>Load sample data</Button>
+        </Inline>
+        {error && <Text><Em>{error}</Em></Text>}
+      </Stack>
+    </SectionMessage>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Evaluation scorecard (development environment only)
@@ -267,12 +379,13 @@ function App() {
   const [status, setStatus] = useState('binding');
   const [data, setData] = useState(null);
   const [open, setOpen] = useState(null);
+  const [version, setVersion] = useState(0);
 
   useEffect(() => {
     setData(null);
     setOpen(null);
     invoke('listRegister', { status }).then(setData);
-  }, [status]);
+  }, [status, version]);
 
   const head = {
     cells: [
@@ -303,6 +416,8 @@ function App() {
         <Heading size="large">Decision register</Heading>
         <Text>What this team has decided, why, and whether it still stands.</Text>
       </Stack>
+
+      <SampleData onChange={() => setVersion((v) => v + 1)} />
 
       <Inline space="space.100">
         {TABS.map((t) => (

@@ -35,6 +35,12 @@ const driftQueue = new Queue({ key: 'evidence-drift' });
  */
 export async function onJiraActivity(event) {
   try {
+    // Second guard: events caused by the app's own writes (sample data).
+    if (event?.selfGenerated) {
+      log.info('skipping self-generated event', { eventType: event?.eventType });
+      return;
+    }
+
     const eventType = event?.eventType ?? '';
     const issue = event?.issue ?? {};
     const issueKey = issue.key;

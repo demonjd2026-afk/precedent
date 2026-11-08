@@ -12,6 +12,7 @@ import { extractDecision } from './engine/extract.js';
 import { checkEvidenceDrift, markStale, runSweep } from './engine/staleness.js';
 import { syncDecisionToGraph } from './connector.js';
 import { log } from './lib/log.js';
+import { isSeededSource } from './seed/seed.js';
 
 /**
  * Async event consumers (@forge/events 2.x+) are plain functions invoked with
@@ -43,6 +44,12 @@ export async function captureWorker(event) {
   if (!text || !sourceId) {
     log.warn('capture event missing required fields', { sourceId });
     return { ok: false };
+  }
+
+  // Third guard: never re-capture a comment the sample-data loader wrote.
+  if (await isSeededSource(sourceId)) {
+    log.info('skipping sample comment', { sourceId });
+    return { ok: true, skipped: 'sample data' };
   }
 
   // Guard against double-capture. The platform may redeliver an event, and a

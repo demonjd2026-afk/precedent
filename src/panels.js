@@ -23,6 +23,7 @@ import { syncDecisionToGraph, removeDecisionFromGraph } from './connector.js';
 import { echo as graphEcho } from './lib/graph.js';
 import { log } from './lib/log.js';
 import { evalsEnabled, startEvalRun, getEvalRun } from './evals.js';
+import { seedStatus, listProjects, requestLoad, requestRemove } from './seed/seed.js';
 
 // ---------------------------------------------------------------------------
 // Issue panel
@@ -208,6 +209,11 @@ register.define('health', async () => {
 register.define('evalStatus', async () => ({ enabled: evalsEnabled(), latest: evalsEnabled() ? await getEvalRun() : null }));
 register.define('startEval', async ({ payload }) => startEvalRun(payload?.suite ?? 'all'));
 register.define('getEval', async ({ payload }) => getEvalRun(payload?.runId));
+
+register.define('seedStatus', async () => seedStatus());
+register.define('listProjects', async () => listProjects());
+register.define('loadSample', async ({ payload }) => requestLoad(payload?.projectKey));
+register.define('removeSample', async () => requestRemove());
 
 export const registerHandler = register.getDefinitions();
 

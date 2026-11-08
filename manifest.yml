@@ -363,6 +363,11 @@ modules:
       events:
         - avi:jira:commented:issue
         - avi:jira:updated:issue
+      # First of three guards against re-capturing the app's own sample
+      # comments. Reported as unreliable for asApp writes, so the trigger and
+      # the capture worker check as well.
+      filter:
+        ignoreSelf: true
 
 
   consumer:
@@ -380,6 +385,11 @@ modules:
     - key: eval-consumer
       queue: precedent-evals
       function: fn-eval-worker
+
+    # Sample data: create and remove demo work items and decisions.
+    - key: seed-consumer
+      queue: precedent-seed
+      function: fn-seed-worker
 
   scheduledTrigger:
     - key: staleness-sweep
@@ -430,6 +440,11 @@ modules:
     - key: fn-eval-worker
       handler: evals.evalWorker
       timeoutSeconds: 900
+
+    # Sample data
+    - key: fn-seed-worker
+      handler: seed.seedWorker
+      timeoutSeconds: 300
 
     # Teamwork Graph connector lifecycle
     - key: fn-connection-change

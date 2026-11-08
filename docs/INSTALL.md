@@ -40,13 +40,14 @@ You will be shown the list of scopes. Accept all of them. The Teamwork Graph sco
 
 The app needs decisions in the register before it has anything to say. You have two ways to get them.
 
-### Option A — seed the demo data (recommended for a first look)
+### Option A — load sample data (recommended for a first look)
 
-```bash
-npm run seed -- --project DEMO
-```
+1. In Jira, open **Apps → Decision register**.
+2. In the **See Precedent with sample data** card at the top, choose any project and press **Load sample data**.
 
-This creates a Jira project with a handful of realistic issues and comments containing genuine decisions, triggers capture on each, and confirms them. Takes about a minute. Skip to step 3.
+In about half a minute this adds eight work items with comments, and six decisions: four binding, one awaiting your confirmation, and one already flagged for review because the assumption behind it has expired. Two of the work items contradict earlier decisions, so the conflict check can be tried immediately. The card names the work items to open.
+
+Everything is labelled `precedent-sample`, and **Remove sample data** deletes exactly what was created. Sample decisions follow the same rules as captured ones: every quote is verbatim in its comment, and every evidence link opens the real comment.
 
 ### Option B — make a real decision
 

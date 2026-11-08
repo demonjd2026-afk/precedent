@@ -236,3 +236,23 @@ export async function clearConnection() {
 }
 
 export { FilterConditions, Filter };
+
+/**
+ * Permanently delete a record. Used only to remove sample data; real decisions
+ * are superseded or rejected, never deleted, because history is the point.
+ * @param {string} id
+ */
+export async function deleteDecision(id) {
+  await decisions().delete(id);
+}
+
+/** Small key-value helpers for app bookkeeping outside the entity store. */
+export async function getState(key) {
+  return kvs.get(key);
+}
+export async function setState(key, value) {
+  await kvs.set(key, value);
+}
+export async function deleteState(key) {
+  await kvs.delete(key);
+}
