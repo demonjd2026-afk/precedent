@@ -1,10 +1,40 @@
 app:
-  # Replace with the id produced by `forge register`.
-  id: ari:cloud:ecosystem::app/REPLACE_WITH_YOUR_APP_ID
-  name: Precedent
-  description: Decision memory for Atlassian teams. Captures decisions where they are made, binds them to the Teamwork Graph, warns when new work contradicts them, and flags them when the ground they stand on changes.
+  id: ari:cloud:ecosystem::app/25ffbde5-7905-491b-8f9f-1bce3fed7de9
+  description: Decision memory for Atlassian teams. Captures decisions where they
+    are made, binds them to the Teamwork Graph, warns when new work contradicts
+    them, and flags them when the ground they stand on changes.
   runtime:
     name: nodejs22.x
+  storage:
+    entities:
+      - name: decision
+        attributes:
+          status:
+            type: string
+          scopeKey:
+            type: string
+          updatedAt:
+            type: string
+          reviewAt:
+            type: string
+          sequence:
+            type: integer
+        indexes:
+          - name: by-status
+            partition:
+              - status
+            range:
+              - updatedAt
+          - name: by-scope
+            partition:
+              - scopeKey
+            range:
+              - updatedAt
+          - name: by-review-date
+            partition:
+              - status
+            range:
+              - reviewAt
 
 permissions:
   scopes:
@@ -29,6 +59,8 @@ permissions:
     - read:graph:user:atlassian
     - read:graph:team:atlassian
     - read:graph:page:confluence
+    - read:page:confluence
+    - read:confluence-content.summary
     # --- Lets customer-built Rovo agents invoke Precedent's actions as tools ---
     - read:chat:rovo
 
@@ -53,20 +85,22 @@ modules:
       function: fn-search-decisions
       actionVerb: GET
       description: >
-        Find past decisions by topic, scope, team or status. Use this first whenever
-        someone asks why something is the way it is, whether something was already
-        decided, or what constrains a piece of work.
+        Find past decisions by topic, scope, team or status. Use this first
+        whenever someone asks why something is the way it is, whether something
+        was already decided, or what constrains a piece of work.
       inputs:
         query:
           title: Query
           type: string
           required: true
-          description: Free text describing the topic, for example "vendor for email delivery" or "refund policy".
+          description: Free text describing the topic, for example "vendor for email
+            delivery" or "refund policy".
         scope:
           title: Scope
           type: string
           required: false
-          description: Optional scope filter such as a Jira project key, Confluence space key or team name.
+          description: Optional scope filter such as a Jira project key, Confluence space
+            key or team name.
         status:
           title: Status
           type: string
@@ -78,9 +112,10 @@ modules:
       function: fn-get-decision
       actionVerb: GET
       description: >
-        Retrieve the full record for one decision by its id, including what was decided,
-        who decided it, the alternatives that were rejected, the assumptions it rests on,
-        its current status, and links to the source evidence.
+        Retrieve the full record for one decision by its id, including what was
+        decided, who decided it, the alternatives that were rejected, the
+        assumptions it rests on, its current status, and links to the source
+        evidence.
       inputs:
         decisionId:
           title: Decision id
@@ -93,10 +128,9 @@ modules:
       function: fn-check-conflict
       actionVerb: GET
       description: >
-        Given a proposal, ticket description or plan, return any past decisions it
-        contradicts or depends on, with the reason and a confidence level. Use this
-        before committing to an approach so the team does not silently reverse a
-        decision somebody already made.
+        Check a proposal, ticket or plan against past decisions. Returns any it
+        contradicts or depends on, with the reason and a confidence level. Use before
+        committing to an approach.
       inputs:
         text:
           title: Proposal text
@@ -107,16 +141,18 @@ modules:
           title: Scope
           type: string
           required: false
-          description: Optional scope hint such as a project key, to narrow which decisions apply.
+          description: Optional scope hint such as a project key, to narrow which
+            decisions apply.
 
     - key: capture-decision
       name: Capture a decision
       function: fn-capture-decision
       actionVerb: CREATE
       description: >
-        Record a decision that has just been made. Extracts the decision, the people who
-        made it, rejected alternatives and underlying assumptions from the supplied text,
-        and files it as a proposed record for a human to confirm.
+        Record a decision that has just been made. Extracts the decision, the
+        people who made it, rejected alternatives and underlying assumptions
+        from the supplied text, and files it as a proposed record for a human to
+        confirm.
       inputs:
         text:
           title: Decision text
@@ -127,7 +163,8 @@ modules:
           title: Source URL
           type: string
           required: false
-          description: Link to where the decision was made, so the record can cite its evidence.
+          description: Link to where the decision was made, so the record can cite its
+            evidence.
         scope:
           title: Scope
           type: string
@@ -139,9 +176,10 @@ modules:
       function: fn-list-stale
       actionVerb: GET
       description: >
-        List decisions whose assumptions have expired, whose referenced work no longer
-        exists, or whose source evidence has been edited since the decision was made.
-        Use this for a decision review or when asked what needs rechecking.
+        List decisions whose assumptions have expired, whose referenced work no
+        longer exists, or whose source evidence has been edited since the
+        decision was made. Use this for a decision review or when asked what
+        needs rechecking.
       inputs:
         scope:
           title: Scope
@@ -154,8 +192,9 @@ modules:
       function: fn-supersede-decision
       actionVerb: UPDATE
       description: >
-        Mark an existing decision as superseded by a newer one, preserving the history
-        rather than deleting it. Use when a team has deliberately reversed an earlier call.
+        Mark an existing decision as superseded by a newer one, preserving the
+        history rather than deleting it. Use when a team has deliberately
+        reversed an earlier call.
       inputs:
         decisionId:
           title: Decision id
@@ -202,7 +241,8 @@ modules:
   rovo:agent:
     - key: precedent-agent
       name: Precedent
-      description: Remembers what your team already decided, and tells you when new work contradicts it.
+      description: Remembers what your team already decided, and tells you when new
+        work contradicts it.
       prompt: resource:agent-prompt;agent-prompt.txt
       conversationStarters:
         - Why did we decide this?
@@ -220,8 +260,9 @@ modules:
         - list-stale-decisions
         - supersede-decision
       followUpPrompt: >
-        Suggest one next step the user could take, such as opening a specific decision
-        record, checking a plan against precedent, or reviewing decisions that have gone stale.
+        Suggest one next step the user could take, such as opening a specific
+        decision record, checking a plan against precedent, or reviewing
+        decisions that have gone stale.
 
   # =========================================================================
   # MCP (Preview) — the same tools, outside Atlassian.
@@ -359,47 +400,11 @@ modules:
     - key: fn-connection-change
       handler: connector.onConnectionChange
 
-# ===========================================================================
-# CUSTOM ENTITY STORE — the decision register.
-# Indexed so the register page, the staleness sweep and scope lookups are
-# queries, not full scans. Forge caps KVS query pages, so every read paginates.
-# ===========================================================================
-storage:
-  entities:
-    - name: decision
-      attributes:
-        status:
-          type: string
-        scopeKey:
-          type: string
-        updatedAt:
-          type: string
-        reviewAt:
-          type: string
-        sequence:
-          type: integer
-      indexes:
-        - name: by-status
-          partition:
-            - status
-          range:
-            - updatedAt
-        - name: by-scope
-          partition:
-            - scopeKey
-          range:
-            - updatedAt
-        - name: by-review-date
-          partition:
-            - status
-          range:
-            - reviewAt
-
 resources:
   - key: panel-ui
-    path: static/panel/build
+    path: src/frontend/panel.jsx
   - key: register-ui
-    path: static/register/build
+    path: src/frontend/register.jsx
   - key: agent-prompt
     path: resources/agent
   - key: connector-icons

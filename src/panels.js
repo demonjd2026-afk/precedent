@@ -8,6 +8,8 @@
  */
 
 import Resolver from '@forge/resolver';
+import api, { route } from '@forge/api';
+import { adfToText } from './engine/detect.js';
 import {
   getDecision,
   listByScope,
@@ -59,11 +61,24 @@ panel.define('getPanelData', async ({ context }) => {
  * page view is a panel an admin uninstalls.
  */
 panel.define('checkThisIssue', async ({ payload, context }) => {
-  const { text } = payload ?? {};
-  const projectKey = context?.extension?.project?.key;
+  const issueKey = context?.extension?.issue?.key;
+  const projectKey = context?.extension?.project?.key ?? scopeFromIssueKey(issueKey);
+
+  // Read the issue as the viewing user, so the check never sees text that
+  // person could not see themselves.
+  let text = payload?.text;
+  if (!text && issueKey) {
+    const res = await api
+      .asUser()
+      .requestJira(route`/rest/api/3/issue/${issueKey}?fields=summary,description`);
+    if (res.ok) {
+      const body = await res.json();
+      text = [body?.fields?.summary, adfToText(body?.fields?.description)].filter(Boolean).join('\n\n');
+    }
+  }
 
   if (!text || text.trim().length < 20) {
-    return { findings: [], summary: 'This issue has too little text to check.' };
+    return { findings: [], summary: 'This issue has too little text to check. Add a description first.' };
   }
 
   const { findings, checked, silent } = await checkConflicts(text, projectKey);
@@ -196,6 +211,7 @@ export const registerHandler = register.getDefinitions();
 function summarise(d) {
   return {
     id: d.id,
+    sequence: d.sequence,
     title: d.title,
     statement: d.statement,
     status: d.status,

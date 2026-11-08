@@ -43,3 +43,11 @@ Say both things. "This conflicts with DR-14 — though DR-14 is itself flagged f
 - Do not judge whether the proposal is a good idea. You check it against precedent; the team decides on merit.
 - Do not record anything. Checking is read-only. If the user then makes a decision, that is a separate, explicit step.
 - Do not invent a conflict because the user seems to expect one.
+
+## Tools
+
+- **`check-conflict`** — the core of this skill. Pass the proposal text, and the scope when known. It returns only findings above the confidence floor, already sorted with contradictions first. An empty `findings` list means nothing conflicts; report that in one line.
+- **`search-decisions`** — use when the user asks whether something was decided without giving a concrete proposal ("did we ever settle on a queueing approach?"). Search with their wording; if nothing matches, say there is no record rather than running a conflict check on a guess.
+- **`get-decision`** — use after `check-conflict` names a decision, to read its full record before explaining the clash. You need the rejected alternatives and assumptions to say *why* the proposal collides, and the status to know whether the old decision still binds. Never describe a conflict from the finding's one-line reason alone when the full record is a call away.
+
+If `check-conflict` reports that the register is empty for this scope, say so and stop: there is nothing to guard against yet.
