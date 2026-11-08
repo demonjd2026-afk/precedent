@@ -1,0 +1,406 @@
+app:
+  # Replace with the id produced by `forge register`.
+  id: ari:cloud:ecosystem::app/REPLACE_WITH_YOUR_APP_ID
+  name: Precedent
+  description: Decision memory for Atlassian teams. Captures decisions where they are made, binds them to the Teamwork Graph, warns when new work contradicts them, and flags them when the ground they stand on changes.
+  runtime:
+    name: nodejs22.x
+
+permissions:
+  scopes:
+    # --- Jira: read work, write back decision links and warnings ---
+    - read:jira-work
+    - write:jira-work
+    - read:jira-user
+    # --- Confluence: read decision sources, publish decision pages ---
+    - read:confluence-content.all
+    - write:confluence-content
+    # --- Forge storage for the decision register ---
+    - storage:app
+    # --- Teamwork Graph connector: ingest decision records into the graph ---
+    - write:object:jira
+    - read:object:jira
+    - delete:object:jira
+    # --- Teamwork Graph API: read context to resolve scope and stakeholders ---
+    # One scope per object type. A missing scope returns EMPTY, never an error.
+    - read:graph:issue:jira
+    - read:graph:issue-comment:jira
+    - read:graph:project:jira
+    - read:graph:user:atlassian
+    - read:graph:team:atlassian
+    - read:graph:page:confluence
+    # --- Lets customer-built Rovo agents invoke Precedent's actions as tools ---
+    - read:chat:rovo
+
+modules:
+  # =========================================================================
+  # Atlassian-hosted LLM. No external egress, so the app stays eligible for
+  # the Runs on Atlassian badge. Adding this module forces a major version.
+  # =========================================================================
+  llm:
+    - key: precedent-llm
+      model:
+        - claude
+
+  # =========================================================================
+  # ACTIONS — the single shared tool layer.
+  # These same functions back the agent, the skills, the MCP server and the UI.
+  # Written once, exposed four ways.
+  # =========================================================================
+  action:
+    - key: search-decisions
+      name: Search decision records
+      function: fn-search-decisions
+      actionVerb: GET
+      description: >
+        Find past decisions by topic, scope, team or status. Use this first whenever
+        someone asks why something is the way it is, whether something was already
+        decided, or what constrains a piece of work.
+      inputs:
+        query:
+          title: Query
+          type: string
+          required: true
+          description: Free text describing the topic, for example "vendor for email delivery" or "refund policy".
+        scope:
+          title: Scope
+          type: string
+          required: false
+          description: Optional scope filter such as a Jira project key, Confluence space key or team name.
+        status:
+          title: Status
+          type: string
+          required: false
+          description: Optional status filter. One of binding, stale, superseded, proposed.
+
+    - key: get-decision
+      name: Get a decision record
+      function: fn-get-decision
+      actionVerb: GET
+      description: >
+        Retrieve the full record for one decision by its id, including what was decided,
+        who decided it, the alternatives that were rejected, the assumptions it rests on,
+        its current status, and links to the source evidence.
+      inputs:
+        decisionId:
+          title: Decision id
+          type: string
+          required: true
+          description: The decision record id, for example DR-14.
+
+    - key: check-conflict
+      name: Check work against past decisions
+      function: fn-check-conflict
+      actionVerb: GET
+      description: >
+        Given a proposal, ticket description or plan, return any past decisions it
+        contradicts or depends on, with the reason and a confidence level. Use this
+        before committing to an approach so the team does not silently reverse a
+        decision somebody already made.
+      inputs:
+        text:
+          title: Proposal text
+          type: string
+          required: true
+          description: The proposed approach, ticket summary or plan to check.
+        scope:
+          title: Scope
+          type: string
+          required: false
+          description: Optional scope hint such as a project key, to narrow which decisions apply.
+
+    - key: capture-decision
+      name: Capture a decision
+      function: fn-capture-decision
+      actionVerb: CREATE
+      description: >
+        Record a decision that has just been made. Extracts the decision, the people who
+        made it, rejected alternatives and underlying assumptions from the supplied text,
+        and files it as a proposed record for a human to confirm.
+      inputs:
+        text:
+          title: Decision text
+          type: string
+          required: true
+          description: The conversation, comment or page content containing the decision.
+        sourceUrl:
+          title: Source URL
+          type: string
+          required: false
+          description: Link to where the decision was made, so the record can cite its evidence.
+        scope:
+          title: Scope
+          type: string
+          required: false
+          description: What this decision binds, such as a project key or team name.
+
+    - key: list-stale-decisions
+      name: List decisions needing review
+      function: fn-list-stale
+      actionVerb: GET
+      description: >
+        List decisions whose assumptions have expired, whose referenced work no longer
+        exists, or whose source evidence has been edited since the decision was made.
+        Use this for a decision review or when asked what needs rechecking.
+      inputs:
+        scope:
+          title: Scope
+          type: string
+          required: false
+          description: Optional scope filter such as a project key or team name.
+
+    - key: supersede-decision
+      name: Supersede a decision
+      function: fn-supersede-decision
+      actionVerb: UPDATE
+      description: >
+        Mark an existing decision as superseded by a newer one, preserving the history
+        rather than deleting it. Use when a team has deliberately reversed an earlier call.
+      inputs:
+        decisionId:
+          title: Decision id
+          type: string
+          required: true
+          description: The decision being superseded, for example DR-14.
+        supersededBy:
+          title: Superseded by
+          type: string
+          required: true
+          description: The id of the newer decision that replaces it.
+        reason:
+          title: Reason
+          type: string
+          required: false
+          description: Why the earlier decision was reversed.
+
+  # =========================================================================
+  # SKILLS (Preview) — task playbooks that keep the agent prompt small.
+  # Each SKILL.md explains how to sequence the actions above.
+  # =========================================================================
+  rovo:skill:
+    - key: decision-historian
+      source:
+        dir: skills/decision-historian
+      dependencies:
+        tools:
+          - search-decisions
+          - get-decision
+          - list-stale-decisions
+
+    - key: decision-guard
+      source:
+        dir: skills/decision-guard
+      dependencies:
+        tools:
+          - check-conflict
+          - search-decisions
+          - get-decision
+
+  # =========================================================================
+  # AGENT — the conversational face of the decision register.
+  # =========================================================================
+  rovo:agent:
+    - key: precedent-agent
+      name: Precedent
+      description: Remembers what your team already decided, and tells you when new work contradicts it.
+      prompt: resource:agent-prompt;agent-prompt.txt
+      conversationStarters:
+        - Why did we decide this?
+        - Does this plan contradict anything we already decided?
+        - Which decisions need review?
+        - What constrains this project?
+      skills:
+        - decision-historian
+        - decision-guard
+      actions:
+        - search-decisions
+        - get-decision
+        - check-conflict
+        - capture-decision
+        - list-stale-decisions
+        - supersede-decision
+      followUpPrompt: >
+        Suggest one next step the user could take, such as opening a specific decision
+        record, checking a plan against precedent, or reviewing decisions that have gone stale.
+
+  # =========================================================================
+  # MCP (Preview) — the same tools, outside Atlassian.
+  # An engineer in Claude or Cursor can ask what constrains this work before
+  # writing a line of code. Admin must enable external exposure per site.
+  # =========================================================================
+  rovo:mcp:
+    - key: precedent-mcp
+      name: Precedent
+      tools:
+        - search-decisions
+        - get-decision
+        - check-conflict
+        - list-stale-decisions
+
+  # =========================================================================
+  # TEAMWORK GRAPH CONNECTOR — makes decisions first-class graph objects,
+  # so they surface in Search, Rovo Chat and other agents, not just in our app.
+  # =========================================================================
+  graph:connector:
+    - key: precedent-decisions
+      name: Precedent
+      capabilities:
+        replicatesPermissions: true
+        syncFidelity: mirror
+        supportsIncrementalSync: true
+      icons:
+        light: resource:connector-icons;icon-light.svg
+        dark: resource:connector-icons;icon-dark.svg
+      objectTypes:
+        - atlassian:document
+      datasource:
+        onConnectionChange:
+          function: fn-connection-change
+
+  # =========================================================================
+  # UI SURFACES
+  # =========================================================================
+  jira:issuePanel:
+    - key: precedent-issue-panel
+      resource: panel-ui
+      render: native
+      resolver:
+        function: fn-panel-resolver
+      title: Precedent
+      icon: resource:connector-icons;icon-light.svg
+
+  jira:globalPage:
+    - key: precedent-register
+      resource: register-ui
+      render: native
+      resolver:
+        function: fn-register-resolver
+      title: Decision register
+      route: precedent
+
+  # =========================================================================
+  # EVENT PLUMBING
+  # Triggers are thin: they classify cheaply and hand work to the async queue,
+  # because trigger functions get 25s and LLM calls do not fit there.
+  # =========================================================================
+  trigger:
+    - key: jira-activity-trigger
+      function: fn-jira-trigger
+      events:
+        - avi:jira:commented:issue
+        - avi:jira:updated:issue
+
+    - key: confluence-activity-trigger
+      function: fn-confluence-trigger
+      events:
+        - avi:confluence:updated:page
+
+  consumer:
+    - key: capture-consumer
+      queue: decision-capture
+      resolver:
+        function: fn-capture-worker
+        method: capture-event
+
+    - key: drift-consumer
+      queue: evidence-drift
+      resolver:
+        function: fn-drift-worker
+        method: drift-event
+
+  scheduledTrigger:
+    - key: staleness-sweep
+      function: fn-staleness-sweep
+      interval: day
+
+  # =========================================================================
+  # FUNCTIONS
+  # Async consumers opt into long timeouts; everything else stays short.
+  # =========================================================================
+  function:
+    # Actions
+    - key: fn-search-decisions
+      handler: actions.searchDecisions
+    - key: fn-get-decision
+      handler: actions.getDecision
+    - key: fn-check-conflict
+      handler: actions.checkConflict
+    - key: fn-capture-decision
+      handler: actions.captureDecision
+    - key: fn-list-stale
+      handler: actions.listStale
+    - key: fn-supersede-decision
+      handler: actions.supersedeDecision
+
+    # UI resolvers
+    - key: fn-panel-resolver
+      handler: panels.panelHandler
+    - key: fn-register-resolver
+      handler: panels.registerHandler
+
+    # Triggers
+    - key: fn-jira-trigger
+      handler: triggers.onJiraActivity
+    - key: fn-confluence-trigger
+      handler: triggers.onConfluenceActivity
+
+    # Async workers — real work happens here, where the clock is generous.
+    - key: fn-capture-worker
+      handler: workers.captureWorker
+      timeoutSeconds: 300
+    - key: fn-drift-worker
+      handler: workers.driftWorker
+      timeoutSeconds: 300
+    - key: fn-staleness-sweep
+      handler: workers.stalenessSweep
+      timeoutSeconds: 900
+
+    # Teamwork Graph connector lifecycle
+    - key: fn-connection-change
+      handler: connector.onConnectionChange
+
+# ===========================================================================
+# CUSTOM ENTITY STORE — the decision register.
+# Indexed so the register page, the staleness sweep and scope lookups are
+# queries, not full scans. Forge caps KVS query pages, so every read paginates.
+# ===========================================================================
+storage:
+  entities:
+    - name: decision
+      attributes:
+        status:
+          type: string
+        scopeKey:
+          type: string
+        updatedAt:
+          type: string
+        reviewAt:
+          type: string
+        sequence:
+          type: integer
+      indexes:
+        - name: by-status
+          partition:
+            - status
+          range:
+            - updatedAt
+        - name: by-scope
+          partition:
+            - scopeKey
+          range:
+            - updatedAt
+        - name: by-review-date
+          partition:
+            - status
+          range:
+            - reviewAt
+
+resources:
+  - key: panel-ui
+    path: static/panel/build
+  - key: register-ui
+    path: static/register/build
+  - key: agent-prompt
+    path: resources/agent
+  - key: connector-icons
+    path: static/icons

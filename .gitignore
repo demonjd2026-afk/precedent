@@ -1,0 +1,18 @@
+node_modules/
+.env
+.env.*
+*.log
+.DS_Store
+
+# Forge
+.forge/
+manifest.yml.bak
+
+# Build output for UI Kit apps
+static/*/build/
+static/*/node_modules/
+
+# Demo recording and script tooling is kept out of the repo
+demo/
+*.mp4
+*.srt
