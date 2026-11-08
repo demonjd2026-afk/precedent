@@ -19,7 +19,7 @@ import {
 } from './lib/store.js';
 import { STATUS, describeStatus } from './lib/model.js';
 import { checkConflicts } from './engine/conflict.js';
-import { syncDecisionToGraph, removeDecisionFromGraph } from './connector.js';
+import { syncDecisionToGraph, removeDecisionFromGraph, graphIndexStatus } from './connector.js';
 import { echo as graphEcho } from './lib/graph.js';
 import { log } from './lib/log.js';
 import { evalsEnabled, startEvalRun, getEvalRun } from './evals.js';
@@ -195,7 +195,11 @@ register.define('health', async () => {
     listByStatus(STATUS.PROPOSED),
   ]);
 
+  const synced = [...binding, ...(await listByStatus(STATUS.STALE))].map((d) => d.id);
+  const index = await graphIndexStatus(synced);
+
   return {
+    index,
     graphReachable: graph.ok,
     graphDetail: graph.detail,
     registerSize: binding.length + proposed.length,

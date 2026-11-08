@@ -132,6 +132,21 @@ function Health() {
           </Stack>
         </SectionMessage>
       )}
+      {h && (
+        <SectionMessage
+          appearance={!h.index?.connected ? 'information' : h.index.items.every((i) => i.status === 'INDEXED') ? 'success' : 'warning'}
+          title={h.index?.connected ? `Teamwork Graph connector: ${h.index.name ?? 'connected'}` : 'Teamwork Graph connector not set up'}>
+          <Stack space="space.050">
+            {!h.index?.connected && <Text>An admin can connect it under Connected apps → Precedent → Connections, to make decisions searchable across Atlassian.</Text>}
+            {h.index?.connected && h.index.items.map((i) => (
+              <Inline key={i.id} space="space.100" alignBlock="center">
+                <Lozenge appearance={i.status === 'INDEXED' ? 'success' : i.status === 'ERROR' ? 'removed' : 'inprogress'}>{i.status}</Lozenge>
+                <Text>{i.id}{i.message ? ` — ${i.message}` : ''}</Text>
+              </Inline>
+            ))}
+          </Stack>
+        </SectionMessage>
+      )}
     </Stack>
   );
 }

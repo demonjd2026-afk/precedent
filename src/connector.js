@@ -198,3 +198,31 @@ async function ingest(connectionId, decisions, base) {
   }
   return { ingested, rejected };
 }
+
+/**
+ * Where synced decisions stand in the graph's search index. Turns "it is not
+ * in search" from a guess into a per-record answer for the health check.
+ *
+ * @param {string[]} ids
+ */
+export async function graphIndexStatus(ids) {
+  const connection = await getConnection();
+  if (!connection?.connectionId) return { connected: false, items: [] };
+
+  const items = [];
+  for (const id of ids.slice(0, 10)) {
+    try {
+      const res = await graph.getObjectIndexStatusByExternalId({
+        connectionId: connection.connectionId,
+        objectType: OBJECT_TYPE,
+        externalId: id,
+      });
+      items.push(res.success
+        ? { id, status: res.status, lastIndexed: res.lastIndexedModifiedDate, message: res.message }
+        : { id, status: 'ERROR', message: res.error });
+    } catch (err) {
+      items.push({ id, status: 'ERROR', message: err?.message });
+    }
+  }
+  return { connected: true, name: connection.name, connectedAt: connection.connectedAt, items };
+}
