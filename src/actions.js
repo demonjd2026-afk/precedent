@@ -39,6 +39,8 @@ import { log } from './lib/log.js';
  * code works from chat, from automation and from an MCP client.
  */
 function inputsOf(payload) {
+  // Every action reads its inputs first, so this is the per-invocation reset.
+  log.reset();
   if (!payload) return {};
   return payload.inputs && typeof payload.inputs === 'object' ? payload.inputs : payload;
 }

@@ -34,6 +34,7 @@ const driftQueue = new Queue({ key: 'evidence-drift' });
  * when someone edits the comment a decision was built on, we know immediately.
  */
 export async function onJiraActivity(event) {
+  log.reset();
   try {
     // Second guard: events caused by the app's own writes (sample data).
     if (event?.selfGenerated) {

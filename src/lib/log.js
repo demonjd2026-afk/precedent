@@ -12,6 +12,12 @@ const MAX_FIELD_CHARS = 500;
 
 let emitted = 0;
 let suppressed = 0;
+let windowStart = Date.now();
+
+// Forge reuses warm containers across invocations, so module state outlives a
+// single run. Entry points call log.reset(); this window is the backstop, so a
+// missed reset can never silence logging for longer than a minute.
+const WINDOW_MS = 60_000;
 
 function truncate(value) {
   if (typeof value !== 'string') return value;
@@ -27,6 +33,11 @@ function sanitise(context = {}) {
 }
 
 function emit(level, message, context) {
+  if (Date.now() - windowStart > WINDOW_MS) {
+    emitted = 0;
+    suppressed = 0;
+    windowStart = Date.now();
+  }
   if (emitted >= MAX_LINES) {
     suppressed += 1;
     return;
@@ -53,8 +64,10 @@ export const log = {
   /** Call at the end of a long worker to report what was swallowed. */
   summary: () => ({ emitted, suppressed }),
   /** Workers reset between invocations in practice, but be explicit. */
+  /** Call at the start of every invocation. */
   reset: () => {
     emitted = 0;
     suppressed = 0;
+    windowStart = Date.now();
   },
 };

@@ -141,6 +141,7 @@ async function runConflict(dataset = conflictData) {
 }
 
 export async function evalWorker(event) {
+  log.reset();
   const { runId, suites = SUITES } = event?.body ?? {};
   if (!runId) return;
 

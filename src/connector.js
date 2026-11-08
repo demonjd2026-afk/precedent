@@ -41,6 +41,7 @@ const OBJECT_TYPE = 'atlassian:document';
  * of graph objects to do here — only our own bookkeeping.
  */
 export async function onConnectionChange(request) {
+  log.reset();
   const body = request?.body ?? request ?? {};
   const { action, connectionId, name } = body;
 

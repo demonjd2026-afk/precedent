@@ -29,6 +29,7 @@ function eventBody(event) {
 // Capture worker
 // ---------------------------------------------------------------------------
 export async function captureWorker(event) {
+  log.reset();
   const payload = event;
   const {
     text,
@@ -96,6 +97,7 @@ export async function captureWorker(event) {
 // Drift worker — runs when a cited source is edited
 // ---------------------------------------------------------------------------
 export async function driftWorker(event) {
+  log.reset();
   const payload = event;
   const { decisionIds = [], sourceId } = eventBody(payload);
   let flagged = 0;

@@ -81,6 +81,7 @@ export async function isSeededSource(sourceId) {
 // ---------------------------------------------------------------------------
 
 export async function seedWorker(event) {
+  log.reset();
   const { action, projectKey } = event?.body ?? {};
   if (action === 'load') return load(projectKey);
   if (action === 'remove') return remove();

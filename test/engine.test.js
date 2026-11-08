@@ -229,3 +229,29 @@ test('source matching does not leak across similar issue keys', () => {
   assert.equal(evidenceMatches({ sourceId: 'LEO-1:5' }, 'LEO-13'), false);
   assert.equal(evidenceMatches({}, 'LEO-13'), false);
 });
+
+// ---------------------------------------------------------------------------
+// Logging budget: regression for silenced logs in warm containers
+// ---------------------------------------------------------------------------
+
+test('log budget resets between invocations', async () => {
+  const { log } = await import('../src/lib/log.js');
+  const original = console.log;
+  const originalWarn = console.warn;
+  let printed = 0;
+  console.log = () => { printed += 1; };
+  console.warn = () => {};
+  try {
+    log.reset();
+    for (let i = 0; i < 200; i += 1) log.info('noise');
+    const firstRun = printed;
+    log.reset(); // next invocation in the same warm container
+    printed = 0;
+    log.info('must not be suppressed');
+    assert.ok(firstRun < 200, 'budget should cap a noisy invocation');
+    assert.equal(printed, 1, 'a new invocation must log again');
+  } finally {
+    console.log = original;
+    console.warn = originalWarn;
+  }
+});
