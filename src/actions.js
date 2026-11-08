@@ -229,23 +229,25 @@ export async function captureDecision(payload, context) {
     };
   }
 
-  const allocated = await allocateId();
   const { record, reason } = await extractDecision(
     {
       text: String(text),
       sourceType: 'manual',
-      sourceId: `manual:${allocated.id}`,
+      sourceId: `manual:${Date.now()}`,
       url: sourceUrl ?? '',
       scopeKey: scope ?? 'UNSCOPED',
       deciders: context?.accountId ? [context.accountId] : [],
     },
-    allocated
+    { id: 'PENDING', sequence: 0 }
   );
 
   if (!record) {
     return { summary: `I did not record anything — ${reason}.`, captured: false, reason };
   }
 
+  const allocated = await allocateId();
+  record.id = allocated.id;
+  record.sequence = allocated.sequence;
   await putDecision(record);
 
   return {

@@ -9,16 +9,54 @@ app:
     entities:
       - name: decision
         attributes:
-          status:
-            type: string
-          scopeKey:
-            type: string
-          updatedAt:
-            type: string
-          reviewAt:
+          id:
             type: string
           sequence:
             type: integer
+          status:
+            type: string
+          title:
+            type: string
+          statement:
+            type: string
+          rejected:
+            type: any
+          assumptions:
+            type: any
+          deciders:
+            type: any
+          decidedAt:
+            type: string
+          scopeKey:
+            type: string
+          tags:
+            type: any
+          evidence:
+            type: any
+          reviewAt:
+            type: string
+          staleReason:
+            type: string
+          staleDetail:
+            type: string
+          supersededBy:
+            type: string
+          supersedeReason:
+            type: string
+          createdAt:
+            type: string
+          updatedAt:
+            type: string
+          confirmedBy:
+            type: string
+          extractionScore:
+            type: float
+          lastVerifiedAt:
+            type: string
+          lastSweepAt:
+            type: string
+          manualEntry:
+            type: boolean
         indexes:
           - name: by-status
             partition:

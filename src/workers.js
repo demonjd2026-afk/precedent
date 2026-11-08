@@ -53,8 +53,8 @@ export async function captureWorker(event) {
     return { ok: true, skipped: 'already captured' };
   }
 
-  const allocated = await allocateId();
-
+  // Extract first, allocate second: non-decisions must not burn an id, or the
+  // register shows gaps that look like deleted records.
   const { record, reason } = await extractDecision(
     {
       text,
@@ -65,7 +65,7 @@ export async function captureWorker(event) {
       deciders: authorId ? [authorId] : [],
       decidedAt: occurredAt,
     },
-    allocated
+    { id: 'PENDING', sequence: 0 }
   );
 
   if (!record) {
@@ -74,6 +74,10 @@ export async function captureWorker(event) {
     log.info('no decision in source', { sourceId, reason, triageScore });
     return { ok: true, captured: false, reason };
   }
+
+  const allocated = await allocateId();
+  record.id = allocated.id;
+  record.sequence = allocated.sequence;
 
   await putDecision(record);
   log.info('decision captured', { id: record.id, sourceId, scope: record.scopeKey });

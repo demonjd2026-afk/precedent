@@ -140,7 +140,8 @@ export function validateDecision(record) {
 
   for (const [i, ev] of (record.evidence ?? []).entries()) {
     if (!ev.contentHash) problems.push(`evidence[${i}] is missing a contentHash`);
-    if (!ev.url) problems.push(`evidence[${i}] is missing a url`);
+    // A decision typed into chat has no page to link to; every other source must.
+    if (!ev.url && ev.sourceType !== SOURCE_TYPE.MANUAL) problems.push(`evidence[${i}] is missing a url`);
   }
 
   return problems;

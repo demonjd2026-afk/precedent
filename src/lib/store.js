@@ -14,6 +14,7 @@
 import { kvs, WhereConditions, FilterConditions, Filter } from '@forge/kvs';
 import { STATUS, validateDecision } from './model.js';
 import { log } from './log.js';
+import { toEntity } from './schema.js';
 
 const ENTITY = 'decision';
 const SEQUENCE_KEY = 'precedent:sequence';
@@ -69,9 +70,13 @@ export async function putDecision(record) {
   if (problems.length > 0) {
     throw new Error(`invalid decision record ${record.id}: ${problems.join('; ')}`);
   }
-  const toWrite = { ...record, updatedAt: new Date().toISOString() };
-  await decisions().set(record.id, toWrite);
-  return toWrite;
+  const { value, undeclared } = toEntity({ ...record, updatedAt: new Date().toISOString() });
+  if (undeclared.length > 0) {
+    // Never silently lose data: say which fields the schema does not know.
+    log.warn('dropping undeclared fields on write', { id: record.id, fields: undeclared.join(',') });
+  }
+  await decisions().set(record.id, value);
+  return value;
 }
 
 /**
