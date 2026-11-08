@@ -76,6 +76,40 @@ Costs are shaped deliberately. Forge LLMs carry **no free usage allowance** — 
 
 ---
 
+## Evaluation
+
+An LLM feature without evaluation is a claim. Precedent's model-backed steps are scored against labelled datasets in [`eval/datasets`](eval/datasets), and the thresholds encode the product's priorities rather than generic targets.
+
+| Suite | What it measures | Threshold | Why this bar |
+|---|---|---|---|
+| Triage gate | Real decisions kept by the free pre-filter | recall ≥ 95% | Anything the gate drops never reaches the model at all |
+| Extraction | Settled decisions vs proposals, questions, preferences, hypotheticals | precision ≥ 90%, recall ≥ 80% | A fabricated decision is worse than a missed one, because people act on it |
+| Extraction | Rejected alternatives recovered | ≥ 80% | The rejected option is the most valuable part of a decision record |
+| Conflict check | Contradictions caught | ≥ 80% | The core promise of the product |
+| Conflict check | False alarms across every proposal × decision pair | ≤ 5% | A guard that cries wolf gets muted |
+
+The datasets include deliberate traps: comments that use decision words without settling anything ("has anyone decided…?", "if we decided to…", "as decided in DR-4"), and proposals that share vocabulary with a decision without conflicting with it.
+
+**Offline** (no model, runs anywhere, part of `npm test`): the triage gate against the dataset, plus unit tests proving the scorer computes what it claims.
+
+```bash
+npm test
+```
+
+**Live** (real Atlassian-hosted model, inside Forge): a development-only web trigger queues a run on a 900-second consumer, and a CLI polls for the scorecard. The trigger fails closed: it returns 404 in production and whenever the `EVAL_TOKEN` variable is missing or does not match.
+
+```bash
+forge variables set --environment development --encrypt EVAL_TOKEN "$(openssl rand -hex 24)"
+forge deploy
+forge webtrigger create          # choose the development install and the precedent-evals trigger
+
+PRECEDENT_EVAL_URL=<url> PRECEDENT_EVAL_TOKEN=<token> npm run eval:live
+```
+
+A full run makes 36 model calls and costs a few cents.
+
+---
+
 ## Layout
 
 ```
@@ -100,13 +134,15 @@ src/
     log.js                Budgeted structured logging
 skills/                   Two SKILL.md playbooks
 resources/agent/          The agent prompt
-test/                     20 tests over the pure logic
+eval/                     Labelled datasets and the pure scoring module
+scripts/eval-live.mjs     Live evaluation CLI
+test/                     30 tests: engine logic, offline evals, scorer correctness
 ```
 
 ## Running the tests
 
 ```bash
-node --test test/engine.test.js
+npm test
 ```
 
 The engine modules have no Forge imports by design, so the parts that decide what reaches the register are testable without a deployed app.

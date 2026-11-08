@@ -11,6 +11,7 @@ import assert from 'node:assert/strict';
 
 import { triage, adfToText } from '../src/engine/detect.js';
 import { normalise, similarity, classifyDrift } from '../src/lib/hash.js';
+import { quoteIsGrounded } from '../src/lib/grounding.js';
 import { validateDecision, buildDecision, describeStatus, STATUS, STALE_REASON } from '../src/lib/model.js';
 
 // ---------------------------------------------------------------------------
@@ -189,4 +190,26 @@ test('status descriptions explain the cause, not just the state', () => {
   };
   assert.match(describeStatus(stale), /source/i);
   assert.match(describeStatus({ ...validRecord(), status: STATUS.PROPOSED }), /confirmation/i);
+});
+
+// ---------------------------------------------------------------------------
+// Grounding: regression for the first live capture
+// ---------------------------------------------------------------------------
+
+test('grounding accepts a quote whose apostrophes differ only typographically', () => {
+  // Jira stored the comment with a curly apostrophe; the model quoted it back
+  // with a straight one. The quote is verbatim and must be accepted.
+  const source = 'Update after today\u2019s call: we\u2019ve decided to use the standard mutual NDA template.';
+  const quote = "we've decided to use the standard mutual NDA template";
+  assert.equal(quoteIsGrounded(quote, source), true);
+});
+
+test('grounding folds curly double quotes and dashes', () => {
+  const source = 'We chose the \u201cstandard\u201d template \u2014 not custom terms.';
+  assert.equal(quoteIsGrounded('We chose the "standard" template - not custom terms', source), true);
+});
+
+test('grounding still rejects a fabricated quote', () => {
+  const source = 'We\u2019ve decided to use the standard mutual NDA template.';
+  assert.equal(quoteIsGrounded("We've decided to negotiate custom terms for every vendor", source), false);
 });

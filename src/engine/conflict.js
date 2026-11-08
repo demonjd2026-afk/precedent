@@ -122,7 +122,19 @@ function recallScore(text, decision) {
  */
 export async function checkConflicts(text, scopeKey) {
   const candidates = await listCandidates(scopeKey);
+  return classifyAgainstCandidates(text, candidates, scopeKey);
+}
 
+/**
+ * The storage-free core of the conflict check: recall, model classification,
+ * confidence floor. Exported separately so the evaluation suite can run the
+ * exact production pipeline against a fixed, labelled register.
+ *
+ * @param {string} text
+ * @param {import('../lib/model.js').DecisionRecord[]} candidates
+ * @param {string} [scopeKey]  Used for logging only.
+ */
+export async function classifyAgainstCandidates(text, candidates, scopeKey) {
   if (candidates.length === 0) {
     return { findings: [], checked: 0, silent: true };
   }

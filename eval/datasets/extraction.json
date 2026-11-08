@@ -1,0 +1,87 @@
+{
+  "description": "Labelled comments for decision extraction. `isDecision` is the ground truth. `rejectedAny` / `assumptionAny` list keywords, any one of which must appear in the extracted field for it to count as recovered. Non-decisions include the traps that matter most: proposals, questions, individual preferences, hypotheticals, agendas and decisions merely restated from elsewhere.",
+  "cases": [
+    { "id": "nda-template", "domain": "legal", "isDecision": true,
+      "text": "Update after today’s call: we’ve decided to use the standard mutual NDA template for all vendor agreements under $50k instead of negotiating custom terms. Custom redlines were ruled out because legal review was taking three weeks per contract. This assumes our insurer’s liability cap stays at $2M, which we should recheck at the renewal in six months.",
+      "rejectedAny": ["custom", "redline"], "assumptionAny": ["liability", "insurer", "$2m", "2m"] },
+
+    { "id": "esignature-vendor", "domain": "legal", "isDecision": true,
+      "text": "Decision from the vendor review: we're going with DocuSign for all contract e-signatures instead of Adobe Sign. Adobe Sign was ruled out because it doesn't support our SSO setup. This assumes DocuSign's pricing holds at the current tier, which we should recheck at the annual renewal.",
+      "rejectedAny": ["adobe"], "assumptionAny": ["pricing", "tier"] },
+
+    { "id": "ad-channel", "domain": "marketing", "isDecision": true,
+      "text": "We're going with LinkedIn ads for the Q1 launch, not Google Display. Display was ruled out after last quarter's 0.2% click-through rate. This assumes LinkedIn CPC stays under $9.",
+      "rejectedAny": ["google", "display"], "assumptionAny": ["cpc", "$9"] },
+
+    { "id": "brand-name", "domain": "marketing", "isDecision": true,
+      "text": "Conclusion from the brand review: the product will launch as “Northwind Flow”, not “Northwind Pipeline”. Pipeline was ruled out because it tested poorly with non-technical buyers.",
+      "rejectedAny": ["pipeline"] },
+
+    { "id": "expense-approval", "domain": "finance", "isDecision": true,
+      "text": "Final call from finance: expense reports over $5,000 now require CFO approval instead of department-head approval. Department-head-only approval was ruled out after the audit finding in September.",
+      "rejectedAny": ["department"] },
+
+    { "id": "enterprise-sla", "domain": "support", "isDecision": true,
+      "text": "We settled on a 4-hour first-response SLA for enterprise tickets rather than 1 hour. One hour was ruled out because it would need a night shift. This assumes enterprise ticket volume stays under 300 a week.",
+      "rejectedAny": ["1 hour", "one hour", "1-hour"], "assumptionAny": ["300", "volume"] },
+
+    { "id": "discount-approval", "domain": "sales", "isDecision": true,
+      "text": "Signed off in the pipeline review: any discount above 20% needs VP approval. We're not going with deal-desk review for every discount — it was too slow at quarter end.",
+      "rejectedAny": ["deal-desk", "deal desk"] },
+
+    { "id": "contract-storage", "domain": "legal", "isDecision": true,
+      "text": "Approved: signed contracts are stored in the Legal Confluence space only. Shared Google Drive was ruled out for access-control reasons.",
+      "rejectedAny": ["drive", "google"] },
+
+    { "id": "vendor-review-cadence", "domain": "operations", "isDecision": true,
+      "text": "Let's go with quarterly vendor reviews instead of monthly ones. Monthly was ruled out because nobody had time to act on the findings. We'll revisit if a vendor incident happens.",
+      "rejectedAny": ["monthly"] },
+
+    { "id": "offsite-location", "domain": "operations", "isDecision": true,
+      "text": "Decision: the Q4 offsite will be in Lisbon on 3–5 December. Budget approved at $40k." },
+
+    { "id": "pricing-page-thread", "domain": "marketing", "isDecision": true,
+      "text": "Priya: Can we keep using the old pricing page for the webinar?\nMarco: No — we agreed yesterday to retire it. We're going with the new tiered pricing page from Monday, and the old URL will redirect." },
+
+    { "id": "ledger-database", "domain": "engineering", "isDecision": true,
+      "text": "After comparing both, we're going with Postgres instead of DynamoDB for the ledger store. DynamoDB was ruled out on the migration cost. This assumes our write volume stays under 500 per second.",
+      "rejectedAny": ["dynamo"], "assumptionAny": ["500", "write volume"] },
+
+    { "id": "hedged-migration", "domain": "engineering", "isDecision": true,
+      "text": "We've decided to go ahead with the Stripe migration in January, though I'm not sure about the exact week yet." },
+
+    { "id": "parental-leave-policy", "domain": "hr", "isDecision": true,
+      "text": "Agreed in today's people-ops sync: the updated parental leave policy applies to contractors converted to full-time after six months of service. We decided against a twelve-month threshold because it excluded most of this year's conversions.",
+      "rejectedAny": ["twelve", "12"] },
+
+    { "id": "open-proposal", "domain": "engineering", "isDecision": false,
+      "text": "Should we move the ledger to Postgres? Keen to hear thoughts before we commit to anything." },
+
+    { "id": "status-update", "domain": "legal", "isDecision": false,
+      "text": "Finished drafting the vendor NDA and sent it to the legal team for review. Will update this ticket once I hear back from them." },
+
+    { "id": "question-with-decision-words", "domain": "legal", "isDecision": false,
+      "text": "Has anyone decided whether we're going with DocuSign or Adobe Sign? I can't find the decision written down anywhere." },
+
+    { "id": "individual-preference", "domain": "marketing", "isDecision": false,
+      "text": "Personally I'd go with LinkedIn ads instead of Google Display, but it's not my call — happy to defer to the marketing leads on this one." },
+
+    { "id": "automation-noise", "domain": "operations", "isDecision": false,
+      "text": "[automated] Approval rule executed: request LEO-21 was approved by the workflow and moved to Done." },
+
+    { "id": "acknowledgement", "domain": "operations", "isDecision": false,
+      "text": "LGTM, thanks!" },
+
+    { "id": "open-vote", "domain": "operations", "isDecision": false,
+      "text": "Options for the offsite: Lisbon, Porto or Barcelona. Please vote by Friday — nothing is decided yet, and we'll go with whichever gets the most votes." },
+
+    { "id": "restated-elsewhere", "domain": "legal", "isDecision": false,
+      "text": "As decided in DR-4 last month, we use the standard NDA template for small vendors — linking it here for context so the reviewer has it." },
+
+    { "id": "hypothetical", "domain": "legal", "isDecision": false,
+      "text": "If we decided to drop Adobe Sign, we'd need to migrate about 300 templates. Just flagging the cost before anyone commits to it." },
+
+    { "id": "agenda", "domain": "support", "isDecision": false,
+      "text": "Agenda for Thursday: 1) decide on enterprise SLA targets 2) review the vendor list 3) agree who owns the support budget." }
+  ]
+}

@@ -22,6 +22,7 @@ import api, { route } from '@forge/api';
 import { STATUS, STALE_REASON } from '../lib/model.js';
 import { listBinding, listDueForReview, patchDecision } from '../lib/store.js';
 import { classifyDrift, contentHash } from '../lib/hash.js';
+import { quoteIsGrounded } from '../lib/grounding.js';
 import { adfToText } from './detect.js';
 import { log } from '../lib/log.js';
 
@@ -116,7 +117,9 @@ export async function checkEvidenceDrift(decision) {
 
     // The decisive test: can we still find the quoted span? If the exact words
     // the decision rests on are gone, the basis is gone, whatever else changed.
-    const quoteStillPresent = text.toLowerCase().includes(evidence.quote.toLowerCase().slice(0, 60));
+    // Same normalisation as capture-time grounding, so typography changes made
+    // by an editor never read as the basis being removed.
+    const quoteStillPresent = quoteIsGrounded(evidence.quote.slice(0, 120), text);
 
     if (!quoteStillPresent) {
       return {

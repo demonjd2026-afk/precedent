@@ -31,6 +31,14 @@ export function normalise(text) {
     .replace(/<[^>]+>/g, ' ')
     // HTML entities left behind by the above.
     .replace(/&[a-z]+;/gi, ' ')
+    // Typographic punctuation. Jira and Confluence auto-convert ' and " to
+    // curly quotes and -- to dashes, while a model quoting the text back will
+    // often emit the plain ASCII form. Without folding these, a verbatim quote
+    // fails grounding and a correct decision is discarded.
+    .replace(/[\u2018\u2019\u201A\u201B\u2032\u0060\u00B4]/g, "'")
+    .replace(/[\u201C\u201D\u201E\u201F\u2033]/g, '"')
+    .replace(/[\u2010-\u2015\u2212]/g, '-')
+    .replace(/\u2026/g, '...')
     // Zero-width and non-breaking characters that editors inject.
     .replace(/[​-‍﻿ ]/g, ' ')
     // Collapse all whitespace.

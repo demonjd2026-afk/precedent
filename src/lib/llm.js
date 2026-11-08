@@ -19,7 +19,7 @@
  */
 
 import { chat } from '@forge/llm';
-import { normalise } from './hash.js';
+import { quoteIsGrounded, enforceGrounding } from './grounding.js';
 import { log } from './log.js';
 
 export const MODELS = Object.freeze({
@@ -113,49 +113,6 @@ export async function callStructured({
 }
 
 /**
- * Verify that a quoted span genuinely appears in the source.
- *
- * Compares on normalised text so that markup stripping, whitespace and case do
- * not cause false rejections, while a fabricated sentence still fails.
- *
- * @param {string} quote
- * @param {string} source
- * @returns {boolean}
- */
-export function quoteIsGrounded(quote, source) {
-  if (!quote || !source) return false;
-  const needle = normalise(quote);
-  if (needle.length < 8) return false; // Too short to be meaningful evidence.
-  return normalise(source).includes(needle);
-}
-
-/**
- * Drop any claim whose quote cannot be found in the source, and report what
- * was dropped so it shows up in logs rather than vanishing silently.
- *
- * @template T
- * @param {T[]} claims
- * @param {string} source
- * @param {(claim: T) => string} getQuote
- * @returns {{kept: T[], dropped: T[]}}
- */
-export function enforceGrounding(claims, source, getQuote) {
-  const kept = [];
-  const dropped = [];
-  for (const claim of claims ?? []) {
-    if (quoteIsGrounded(getQuote(claim), source)) kept.push(claim);
-    else dropped.push(claim);
-  }
-  if (dropped.length > 0) {
-    log.warn('dropped ungrounded claims', {
-      count: dropped.length,
-      sample: getQuote(dropped[0]),
-    });
-  }
-  return { kept, dropped };
-}
-
-/**
  * Report token usage so cost is visible in logs during the hackathon and in
  * production. Forge returns input/output token counts on every response.
  *
@@ -170,3 +127,5 @@ export function recordUsage(label, usage) {
     output: usage.output_tokens,
   });
 }
+
+export { quoteIsGrounded, enforceGrounding };

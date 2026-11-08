@@ -11,7 +11,9 @@
     "lint": "forge lint",
     "deploy": "forge deploy",
     "tunnel": "forge tunnel",
-    "test": "node --test test/"
+    "test": "node --test test/engine.test.js test/eval-offline.test.js",
+    "eval:offline": "node --test test/eval-offline.test.js",
+    "eval:live": "node scripts/eval-live.mjs"
   },
   "dependencies": {
     "@forge/api": "^8.4.0",
