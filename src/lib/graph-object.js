@@ -3,6 +3,7 @@
  */
 
 import { describeStatus } from './model.js';
+import { absolutise, isAbsoluteHttpUrl } from './url.js';
 
 export const SCHEMA_VERSION = '1.0';
 export const OBJECT_TYPE = 'atlassian:document';
@@ -17,7 +18,7 @@ export const OBJECT_TYPE = 'atlassian:document';
  * @param {import('./lib/model.js').DecisionRecord} d
  * @returns {import('@forge/teamwork-graph').types.DocumentObject}
  */
-export function toGraphObject(d) {
+export function toGraphObject(d, baseUrl = '') {
   const body = [
     d.statement,
     (d.rejected ?? []).length ? `Rejected alternatives: ${d.rejected.join('; ')}.` : '',
@@ -32,7 +33,9 @@ export function toGraphObject(d) {
     .filter(Boolean)
     .join('\n');
 
-  const sourceUrl = d.evidence?.[0]?.url ?? '';
+  // Records captured before the site URL was resolved hold relative links;
+  // the graph only accepts absolute ones.
+  const sourceUrl = absolutise(d.evidence?.[0]?.url ?? '', baseUrl);
 
   return {
     schemaVersion: SCHEMA_VERSION,
@@ -65,4 +68,12 @@ export function toGraphObject(d) {
       labels: ['decision', d.status, ...(d.tags ?? [])],
     },
   };
+}
+
+/** Local pre-flight check, so one malformed record cannot sink a batch. */
+export function graphObjectProblems(obj) {
+  const problems = [];
+  if (!isAbsoluteHttpUrl(obj.url)) problems.push(`url is not absolute: ${obj.url || '(empty)'}`);
+  if (!obj.displayName) problems.push('missing displayName');
+  return problems;
 }

@@ -13,6 +13,8 @@ import { checkEvidenceDrift, markStale, runSweep } from './engine/staleness.js';
 import { syncDecisionToGraph } from './connector.js';
 import { log } from './lib/log.js';
 import { isSeededSource } from './seed/seed.js';
+import { siteUrl } from './lib/site.js';
+import { absolutise } from './lib/url.js';
 
 /**
  * Async event consumers (@forge/events 2.x+) are plain functions invoked with
@@ -68,7 +70,7 @@ export async function captureWorker(event) {
       text,
       sourceType,
       sourceId,
-      url: url ?? '',
+      url: absolutise(url ?? '', await siteUrl()),
       scopeKey: scopeKey ?? 'UNSCOPED',
       deciders: authorId ? [authorId] : [],
       decidedAt: occurredAt,

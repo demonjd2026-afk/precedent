@@ -6,7 +6,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { toGraphObject, OBJECT_TYPE } from '../src/lib/graph-object.js';
+import { toGraphObject, graphObjectProblems, OBJECT_TYPE } from '../src/lib/graph-object.js';
+import { absolutise } from '../src/lib/url.js';
 import { buildDecision, STATUS } from '../src/lib/model.js';
 
 const decision = () => ({
@@ -37,4 +38,22 @@ test('graph documents carry the fields people search for', () => {
   assert.match(text, /Status: Binding/);
   assert.ok(obj.url.startsWith('https://'), 'the result must open the source evidence');
   assert.ok(Number.isInteger(obj.updateSequenceNumber));
+});
+
+// ---------------------------------------------------------------------------
+// Regression: relative evidence URLs rejected by the graph
+// ---------------------------------------------------------------------------
+
+test('relative evidence links are made absolute against the site URL', () => {
+  const base = 'https://one-atlas-eccr.atlassian.net';
+  assert.equal(absolutise('/browse/LEO-13?focusedCommentId=84904', base), `${base}/browse/LEO-13?focusedCommentId=84904`);
+  assert.equal(absolutise('browse/LEO-13', `${base}/`), `${base}/browse/LEO-13`);
+  assert.equal(absolutise('https://other.example/x', base), 'https://other.example/x', 'absolute links are untouched');
+});
+
+test('a record captured with a relative link syncs once the site is known', () => {
+  const d = decision();
+  d.evidence[0].url = '/browse/LEO-13?focusedCommentId=84904';
+  assert.ok(graphObjectProblems(toGraphObject(d, '')).length > 0, 'without a base it must be caught locally');
+  assert.deepEqual(graphObjectProblems(toGraphObject(d, 'https://one-atlas-eccr.atlassian.net')), []);
 });

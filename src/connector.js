@@ -30,8 +30,9 @@
  * deciders are stored as Atlassian account ids rather than names or emails.
  */
 
-import { graph, types } from '@forge/teamwork-graph';
-import { toGraphObject, OBJECT_TYPE } from './lib/graph-object.js';
+import { graph } from '@forge/teamwork-graph';
+import { toGraphObject, graphObjectProblems, OBJECT_TYPE } from './lib/graph-object.js';
+import { siteUrl } from './lib/site.js';
 import { STATUS } from './lib/model.js';
 import { getConnection, setConnection, clearConnection, listByStatus } from './lib/store.js';
 import { log } from './lib/log.js';
@@ -86,37 +87,8 @@ export async function backfill(connectionId) {
     return { ingested: 0 };
   }
 
-  const BATCH = 50;
-  let ingested = 0;
-  let rejected = 0;
-
-  for (let i = 0; i < all.length; i += BATCH) {
-    const slice = all.slice(i, i + BATCH);
-    const response = await graph.setObjects({
-      connectionId,
-      objects: slice.map(toGraphObject),
-      operationType: types.OperationType?.BACKFILL,
-    });
-
-    // Do not ignore ingestion errors. A silently rejected object is a decision
-    // that will never show up in search, and nobody will notice for months.
-    // Count from the per-object results even when the batch failed, or a fully
-    // rejected batch reports "0 rejected".
-    const accepted = response.results?.accepted?.length ?? 0;
-    const bad = response.results?.rejected ?? [];
-    ingested += accepted;
-    rejected += bad.length || (response.success ? 0 : slice.length - accepted);
-    if (!response.success) {
-      log.error('graph ingestion failed', { error: response.error, batch: i / BATCH });
-    }
-    for (const r of bad.slice(0, 3)) {
-      log.warn('graph rejected object', {
-        id: JSON.stringify(r.key?.entityId),
-        errors: r.errors?.map((e) => e.message).join('; '),
-      });
-    }
-  }
-
+  const base = await siteUrl();
+  const { ingested, rejected } = await ingest(connectionId, all, base);
   log.info('backfill complete', { ingested, rejected, total: all.length });
   return { ingested, rejected };
 }
@@ -142,26 +114,8 @@ export async function syncDecisionToGraph(decision) {
     return { synced: false, reason: 'not confirmed' };
   }
 
-  const response = await graph.setObjects({
-    connectionId: connection.connectionId,
-    objects: [toGraphObject(decision)],
-  });
-
-  if (!response.success) {
-    log.error('graph sync failed', { id: decision.id, error: response.error });
-    return { synced: false, reason: response.error };
-  }
-
-  const rejected = response.results?.rejected ?? [];
-  if (rejected.length > 0) {
-    log.warn('graph rejected decision', {
-      id: decision.id,
-      errors: rejected[0]?.errors?.map((e) => e.message).join('; '),
-    });
-    return { synced: false, reason: 'rejected by graph' };
-  }
-
-  return { synced: true };
+  const { ingested } = await ingest(connection.connectionId, [decision], await siteUrl());
+  return ingested === 1 ? { synced: true } : { synced: false, reason: 'rejected by graph' };
 }
 
 /**
@@ -185,3 +139,62 @@ export async function removeDecisionFromGraph(decisionId) {
 }
 
 export { toGraphObject };
+
+/**
+ * Send decisions to the graph in batches. Each object is checked locally
+ * first; a batch the graph still rejects is retried object by object, so one
+ * bad record can never block the others.
+ *
+ * @returns {Promise<{ingested: number, rejected: number}>}
+ */
+async function ingest(connectionId, decisions, base) {
+  let ingested = 0;
+  let rejected = 0;
+
+  const ready = [];
+  for (const d of decisions) {
+    const obj = toGraphObject(d, base);
+    const problems = graphObjectProblems(obj);
+    if (problems.length > 0) {
+      rejected += 1;
+      log.warn('skipping decision the graph would reject', { id: d.id, problems: problems.join('; ') });
+    } else {
+      ready.push(obj);
+    }
+  }
+
+  const send = async (objects) => {
+    const response = await graph.setObjects({ connectionId, objects });
+    return {
+      ok: response.success,
+      accepted: response.results?.accepted?.length ?? 0,
+      bad: response.results?.rejected ?? [],
+      error: response.error,
+    };
+  };
+
+  const BATCH = 50;
+  for (let i = 0; i < ready.length; i += BATCH) {
+    const slice = ready.slice(i, i + BATCH);
+    const result = await send(slice);
+    if (result.ok && result.bad.length === 0) {
+      ingested += result.accepted;
+      continue;
+    }
+
+    // Isolate: retry one at a time and log exactly which record fails and why.
+    for (const obj of slice) {
+      const single = await send([obj]);
+      if (single.ok && single.bad.length === 0) {
+        ingested += 1;
+      } else {
+        rejected += 1;
+        log.warn('graph rejected decision', {
+          id: obj.id,
+          errors: single.bad[0]?.errors?.map((e) => e.message).join('; ') ?? single.error,
+        });
+      }
+    }
+  }
+  return { ingested, rejected };
+}
