@@ -61,20 +61,8 @@ export async function readSource(evidence) {
       return { text: `${summary}\n\n${description}`, missing: false };
     }
 
-    if (evidence.sourceType === 'confluence_page') {
-      const res = await api
-        .asApp()
-        .requestConfluence(
-          route`/wiki/api/v2/pages/${evidence.sourceId}?body-format=atlas_doc_format`
-        );
-      if (res.status === 404) return { text: null, missing: true };
-      if (!res.ok) return { text: null, missing: false };
-      const body = await res.json();
-      const raw = body?.body?.atlas_doc_format?.value;
-      const parsed = typeof raw === 'string' ? safeJson(raw) : raw;
-      return { text: adfToText(parsed), missing: false };
-    }
-
+    // Confluence sources cannot be re-read over REST from a Jira-only install,
+    // so they report as unverified rather than as unchanged.
     return { text: null, missing: false };
   } catch (err) {
     log.warn('could not re-read source', {

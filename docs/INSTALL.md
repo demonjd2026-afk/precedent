@@ -8,7 +8,7 @@ Written for someone who has never seen this app and is working on their own empt
 
 ## What you need first
 
-- An Atlassian Cloud site with **Jira** and **Confluence**. A free developer site works: run `forge site provision` if you don't have one.
+- An Atlassian Cloud site with **Jira**. Confluence is optional; Precedent reaches it through the Teamwork Graph. A free developer site works: run `forge site provision` if you don't have one.
 - **Rovo** available on that site, for the agent and MCP parts. Provisioned developer sites include Rovo.
 - **Node.js 20 or later** (`node --version`).
 - **Site admin** on the site you're installing to. Precedent requests Teamwork Graph scopes, and only an admin can grant those.
@@ -30,7 +30,7 @@ forge deploy
 forge install
 ```
 
-When `forge install` asks which products, **select both Jira and Confluence**. Precedent reads decisions from both, and installing to only one leaves half the app inert.
+When `forge install` asks which product, **select Jira**. Precedent is a single Jira installation by design, so the decision register stays one register.
 
 You will be shown the list of scopes. Accept all of them. The Teamwork Graph scopes are the ones that matter most — a declined graph scope returns *empty results rather than an error*, so the app will appear to work and quietly show you nothing.
 

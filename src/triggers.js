@@ -16,6 +16,10 @@ import { triage, adfToText } from './engine/detect.js';
 import { listCitingSource } from './lib/store.js';
 import { log } from './lib/log.js';
 
+// Precedent installs into Jira only. Confluence is reached through the
+// Teamwork Graph rather than a second installation, which would split the
+// register into two stores and rule out a free Marketplace listing.
+
 const captureQueue = new Queue({ key: 'decision-capture' });
 const driftQueue = new Queue({ key: 'evidence-drift' });
 
@@ -78,48 +82,6 @@ export async function onJiraActivity(event) {
     // A trigger that throws is retried by the platform; log enough to diagnose
     // but never let a malformed event stall the pipeline.
     log.error('jira trigger failed', { error: err?.message });
-  }
-}
-
-/**
- * Confluence page updates. Same two jobs, different payload shape.
- */
-export async function onConfluenceActivity(event) {
-  try {
-    const page = event?.content ?? event?.page ?? {};
-    const pageId = page.id ?? event?.contentId;
-    if (!pageId) return;
-
-    const title = page.title ?? '';
-    const body = adfToText(page?.body?.atlas_doc_format?.value ?? page?.body);
-    const text = [title, body].filter(Boolean).join('\n\n');
-    const sourceId = String(pageId);
-
-    const citing = await listCitingSource(sourceId);
-    if (citing.length > 0) {
-      await driftQueue.push({
-        sourceId,
-        sourceType: 'confluence_page',
-        decisionIds: citing.map((d) => d.id),
-      });
-      log.info('queued drift check', { sourceId, decisions: citing.length });
-    }
-
-    const gate = triage(text);
-    if (!gate.proceed) return;
-
-    await captureQueue.push({
-      text,
-      sourceType: 'confluence_page',
-      sourceId,
-      url: page?._links?.webui ?? '',
-      scopeKey: page?.spaceKey ?? page?.space?.key ?? 'UNSCOPED',
-      authorId: event?.atlassianId ?? page?.version?.by?.accountId,
-      occurredAt: page?.version?.when ?? event?.timestamp,
-      triageScore: gate.score,
-    });
-  } catch (err) {
-    log.error('confluence trigger failed', { error: err?.message });
   }
 }
 

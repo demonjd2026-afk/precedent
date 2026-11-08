@@ -42,9 +42,6 @@ permissions:
     - read:jira-work
     - write:jira-work
     - read:jira-user
-    # --- Confluence: read decision sources, publish decision pages ---
-    - read:confluence-content.all
-    - write:confluence-content
     # --- Forge storage for the decision register ---
     - storage:app
     # --- Teamwork Graph connector: ingest decision records into the graph ---
@@ -59,8 +56,6 @@ permissions:
     - read:graph:user:atlassian
     - read:graph:team:atlassian
     - read:graph:page:confluence
-    - read:page:confluence
-    - read:confluence-content.summary
     # --- Lets customer-built Rovo agents invoke Precedent's actions as tools ---
     - read:chat:rovo
 
@@ -331,10 +326,6 @@ modules:
         - avi:jira:commented:issue
         - avi:jira:updated:issue
 
-    - key: confluence-activity-trigger
-      function: fn-confluence-trigger
-      events:
-        - avi:confluence:updated:page
 
   consumer:
     - key: capture-consumer
@@ -382,8 +373,6 @@ modules:
     # Triggers
     - key: fn-jira-trigger
       handler: triggers.onJiraActivity
-    - key: fn-confluence-trigger
-      handler: triggers.onConfluenceActivity
 
     # Async workers — real work happens here, where the clock is generous.
     - key: fn-capture-worker
