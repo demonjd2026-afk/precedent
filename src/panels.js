@@ -22,6 +22,7 @@ import { checkConflicts } from './engine/conflict.js';
 import { syncDecisionToGraph, removeDecisionFromGraph } from './connector.js';
 import { echo as graphEcho } from './lib/graph.js';
 import { log } from './lib/log.js';
+import { evalsEnabled, startEvalRun, getEvalRun } from './evals.js';
 
 // ---------------------------------------------------------------------------
 // Issue panel
@@ -203,6 +204,10 @@ register.define('health', async () => {
       : 'Teamwork Graph could not be reached. Precedent still works; graph-backed context will be unavailable.',
   };
 });
+
+register.define('evalStatus', async () => ({ enabled: evalsEnabled(), latest: evalsEnabled() ? await getEvalRun() : null }));
+register.define('startEval', async ({ payload }) => startEvalRun(payload?.suite ?? 'all'));
+register.define('getEval', async ({ payload }) => getEvalRun(payload?.runId));
 
 export const registerHandler = register.getDefinitions();
 

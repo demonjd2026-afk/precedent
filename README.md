@@ -96,15 +96,9 @@ The datasets include deliberate traps: comments that use decision words without 
 npm test
 ```
 
-**Live** (real Atlassian-hosted model, inside Forge): a development-only web trigger queues a run on a 900-second consumer, and a CLI polls for the scorecard. The trigger fails closed: it returns 404 in production and whenever the `EVAL_TOKEN` variable is missing or does not match.
+**Live** (real Atlassian-hosted model, inside Forge): open **Apps → Decision register** on a development install and press **Run evaluation**. The run executes on a 900-second async consumer and the page renders the scorecard, naming every false decision, missed decision and false alarm. The controls exist only outside the production environment.
 
-```bash
-forge variables set --environment development --encrypt EVAL_TOKEN "$(openssl rand -hex 24)"
-forge deploy
-forge webtrigger create          # choose the development install and the precedent-evals trigger
-
-PRECEDENT_EVAL_URL=<url> PRECEDENT_EVAL_TOKEN=<token> npm run eval:live
-```
+There is deliberately no web trigger for this. A web trigger is a public inbound URL, and adding one removes the app's Runs on Atlassian eligibility. Driving evaluation through the app's own UI keeps everything on the platform.
 
 A full run makes 36 model calls and costs a few cents.
 
@@ -135,7 +129,7 @@ src/
 skills/                   Two SKILL.md playbooks
 resources/agent/          The agent prompt
 eval/                     Labelled datasets and the pure scoring module
-scripts/eval-live.mjs     Live evaluation CLI
+src/evals.js              Live evaluation runner (dev environment only)
 test/                     30 tests: engine logic, offline evals, scorer correctness
 ```
 

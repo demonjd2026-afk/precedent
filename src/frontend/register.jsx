@@ -135,6 +135,124 @@ function Health() {
   );
 }
 
+
+// ---------------------------------------------------------------------------
+// Evaluation scorecard (development environment only)
+// ---------------------------------------------------------------------------
+
+const pct = (x) => (x === null || x === undefined ? 'n/a' : `${(x * 100).toFixed(1)}%`);
+
+function Metric({ label, value, min, max }) {
+  const ok = value === null || value === undefined ? null
+    : min !== undefined ? value >= min
+    : max !== undefined ? value <= max
+    : null;
+  const target = min !== undefined ? `target ≥ ${pct(min)}` : max !== undefined ? `target ≤ ${pct(max)}` : '';
+  return (
+    <Inline space="space.100" alignBlock="center">
+      {ok === null ? <Lozenge>info</Lozenge> : <Lozenge appearance={ok ? 'success' : 'removed'}>{ok ? 'pass' : 'fail'}</Lozenge>}
+      <Text><Strong>{pct(value)}</Strong> {label}{target ? ` (${target})` : ''}</Text>
+    </Inline>
+  );
+}
+
+function Scorecard({ report }) {
+  const T = report.thresholds;
+  const e = report.extraction;
+  const c = report.conflict;
+  const t = report.triage;
+  return (
+    <Stack space="space.200">
+      <SectionMessage appearance={report.passed ? 'success' : 'warning'}
+        title={report.passed ? 'All thresholds met' : `${report.failures.length} threshold(s) missed`}>
+        <Text>Finished {report.finishedAt?.slice(0, 19).replace('T', ' ')} UTC in {report.durationSeconds}s.</Text>
+        {report.failures?.map((f) => <Text key={f}>• {f}</Text>)}
+      </SectionMessage>
+
+      {t && (
+        <Stack space="space.075">
+          <Strong>Triage gate — free, runs before any model call</Strong>
+          <Metric label="of real decisions kept" value={t.recall} min={T.triage.recall} />
+          <Text>{t.modelCallsAvoided} model calls avoided on this dataset.</Text>
+        </Stack>
+      )}
+
+      {e && (
+        <Stack space="space.075">
+          <Strong>Decision extraction — {e.counts.scored} labelled comments</Strong>
+          <Metric label="precision" value={e.precision} min={T.extraction.precision} />
+          <Metric label="recall" value={e.recall} min={T.extraction.recall} />
+          <Metric label="rejected alternatives recovered" value={e.rejectedRecall} min={T.extraction.rejectedRecall} />
+          <Metric label="assumptions recovered" value={e.assumptionRecall} />
+          <Text>{e.groundingRejections} extraction(s) blocked by the grounding check.</Text>
+          {e.falsePositives.map((f) => <Text key={f.id}><Em>False decision: {f.id} — “{f.title}”</Em></Text>)}
+          {e.falseNegatives.map((f) => <Text key={f.id}><Em>Missed: {f.id} — {f.reason}</Em></Text>)}
+          {e.fieldMisses.map((f) => <Text key={`${f.id}-${f.field}`}><Em>{f.field} not recovered: {f.id}</Em></Text>)}
+        </Stack>
+      )}
+
+      {c && (
+        <Stack space="space.075">
+          <Strong>Conflict check — {c.counts.unrelatedPairs + c.counts.contradictionsExpected + c.counts.dependsExpected} proposal × decision pairs</Strong>
+          <Metric label="of contradictions caught" value={c.contradictionRecall} min={T.conflict.contradictionRecall} />
+          <Metric label="of dependencies caught" value={c.dependencyRecall} />
+          <Metric label="false alarm rate" value={c.falseAlarmRate} max={T.conflict.falseAlarmRate} />
+          <Metric label="of unrelated proposals left alone" value={c.silenceOnUnrelated} min={T.conflict.silenceOnUnrelated} />
+          {c.alarms.map((a) => <Text key={`${a.case}-${a.decision}`}><Em>False alarm: {a.case} → {a.decision} ({a.got})</Em></Text>)}
+          {c.misses.map((m) => <Text key={`${m.case}-${m.decision}`}><Em>Missed: {m.case} → {m.decision} (wanted {m.want}, got {m.got})</Em></Text>)}
+        </Stack>
+      )}
+    </Stack>
+  );
+}
+
+function Evaluation() {
+  const [enabled, setEnabled] = useState(null);
+  const [run, setRun] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    invoke('evalStatus').then((s) => { setEnabled(s.enabled); setRun(s.latest); });
+  }, []);
+
+  const active = run && (run.status === 'queued' || run.status === 'running');
+
+  useEffect(() => {
+    if (!active) return undefined;
+    const timer = setInterval(async () => {
+      const next = await invoke('getEval', { runId: run.runId });
+      if (next) setRun(next);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [active, run?.runId]);
+
+  if (!enabled) return null;
+
+  const start = async () => {
+    setError(null);
+    const res = await invoke('startEval', { suite: 'all' });
+    if (res?.error) setError(res.error);
+    else setRun({ runId: res.runId, status: 'queued' });
+  };
+
+  return (
+    <Stack space="space.150">
+      <Heading size="small">Evaluation</Heading>
+      <Text>Scores the live model against labelled datasets. Development only; about 36 model calls per run.</Text>
+      <Inline space="space.100" alignBlock="center">
+        <Button appearance="primary" isDisabled={active} onClick={start}>
+          {active ? 'Running…' : 'Run evaluation'}
+        </Button>
+        {active && <Spinner size="small" />}
+        {active && <Text>{run.status}</Text>}
+      </Inline>
+      {error && <SectionMessage appearance="error"><Text>{error}</Text></SectionMessage>}
+      {run?.status === 'failed' && <SectionMessage appearance="error" title="Run failed"><Text>{run.error}</Text></SectionMessage>}
+      {run?.status === 'complete' && <Scorecard report={run} />}
+    </Stack>
+  );
+}
+
 function App() {
   const [status, setStatus] = useState('binding');
   const [data, setData] = useState(null);
@@ -204,6 +322,8 @@ function App() {
         <Heading size="small">Health</Heading>
         <Health />
       </Stack>
+
+      <Evaluation />
     </Stack>
   );
 }

@@ -1,27 +1,22 @@
 /**
  * Live evaluation runner — scores the real model against labelled datasets.
  *
- * Runs inside Forge because @forge/llm only works there. Two pieces:
+ * Runs inside Forge because @forge/llm only works there. Started from the
+ * Decision register page and executed on an async consumer (900s), because a
+ * full run is ~36 model calls and a resolver gets 25 seconds.
  *
- *  - `evalTrigger` (web trigger): starts a run and returns a run id, or returns
- *    a finished report. A web trigger gets 55 seconds, too short for ~36 model
- *    calls, so it only enqueues.
- *  - `evalWorker` (async consumer, 900s): executes the run and stores the report.
+ * Deliberately not a web trigger. A web trigger is a public inbound URL, and
+ * adding one removes the app's Runs on Atlassian eligibility. Driving evals
+ * through the app's own UI keeps every byte on the platform, behind Jira login,
+ * and the controls disable themselves in the production environment.
  *
- * Security. Web trigger URLs are public and unauthenticated by default. This
- * one fails closed: it answers 404 unless (a) the app is not running in the
- * production environment and (b) the request carries the EVAL_TOKEN set with
- * `forge variables set --encrypt`. With no token configured it never answers,
- * so a production install exposes nothing.
- *
- * The scoring is not here: it lives in eval/score.js as pure functions, which
- * are unit-tested offline.
+ * Scoring lives in eval/score.js as pure, unit-tested functions.
  */
 
 import { kvs } from '@forge/kvs';
 import { Queue } from '@forge/events';
 import { getAppContext } from '@forge/api';
-import { timingSafeEqual, randomUUID } from 'crypto';
+import { randomUUID } from 'crypto';
 
 import { extractDecision } from './engine/extract.js';
 import { classifyAgainstCandidates } from './engine/conflict.js';
@@ -33,72 +28,48 @@ import { log } from './lib/log.js';
 
 const evalQueue = new Queue({ key: 'precedent-evals' });
 const RUN_KEY = (id) => `precedent:eval:run:${id}`;
+const LATEST_KEY = 'precedent:eval:latest';
 const SUITES = ['extraction', 'conflict'];
 const CONCURRENCY = 3;
 
 // ---------------------------------------------------------------------------
-// Web trigger
+// Entry points, called from the register page's resolver
 // ---------------------------------------------------------------------------
 
-function respond(statusCode, body) {
-  return {
-    statusCode,
-    headers: { 'Content-Type': ['application/json'] },
-    body: JSON.stringify(body),
-  };
-}
-
-const NOT_FOUND = () => respond(404, { error: 'not found' });
-
-function header(request, name) {
-  const headers = request?.headers ?? {};
-  const value = headers[name] ?? headers[name.toLowerCase()];
-  return Array.isArray(value) ? value[0] : value;
-}
-
-function query(request, name) {
-  const value = request?.queryParameters?.[name];
-  return Array.isArray(value) ? value[0] : value;
-}
-
-function authorised(request) {
-  const expected = process.env.EVAL_TOKEN;
-  if (!expected || expected.length < 16) return false;
-
-  let environmentType;
+/**
+ * Evaluations run only outside production. A judge or customer installing the
+ * production build never sees the controls and cannot spend tokens on them.
+ */
+export function evalsEnabled() {
   try {
-    environmentType = getAppContext()?.environmentType;
+    const env = getAppContext()?.environmentType;
+    return Boolean(env) && env.toUpperCase() !== 'PRODUCTION';
   } catch {
     return false;
   }
-  if (!environmentType || environmentType.toUpperCase() === 'PRODUCTION') return false;
-
-  const supplied = (header(request, 'authorization') ?? '').replace(/^Bearer\s+/i, '');
-  const a = Buffer.from(supplied);
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
 }
 
-export async function evalTrigger(request) {
-  if (!authorised(request)) return NOT_FOUND();
-
-  const runId = query(request, 'run');
-  if (runId) {
-    if (!/^[a-f0-9-]{36}$/.test(runId)) return respond(400, { error: 'bad run id' });
-    const report = await kvs.get(RUN_KEY(runId));
-    return report ? respond(200, report) : respond(404, { error: 'unknown run' });
-  }
-
-  const requested = (query(request, 'suite') ?? 'all').toLowerCase();
+export async function startEvalRun(suite = 'all') {
+  if (!evalsEnabled()) return { error: 'Evaluations are disabled in production.' };
+  const requested = String(suite).toLowerCase();
   const suites = requested === 'all' ? SUITES : SUITES.filter((s) => s === requested);
-  if (suites.length === 0) return respond(400, { error: `suite must be one of: all, ${SUITES.join(', ')}` });
+  if (suites.length === 0) return { error: `suite must be one of: all, ${SUITES.join(', ')}` };
 
   const id = randomUUID();
   await kvs.set(RUN_KEY(id), { runId: id, status: 'queued', suites, queuedAt: new Date().toISOString() });
+  await kvs.set(LATEST_KEY, id);
   await evalQueue.push({ body: { runId: id, suites } });
   log.info('eval run queued', { runId: id, suites: suites.join(',') });
+  return { runId: id, status: 'queued', suites };
+}
 
-  return respond(202, { runId: id, status: 'queued', suites });
+/** The given run, or the most recent one when no id is passed. */
+export async function getEvalRun(runId) {
+  if (!evalsEnabled()) return { error: 'Evaluations are disabled in production.' };
+  const id = runId ?? (await kvs.get(LATEST_KEY));
+  if (!id) return null;
+  if (!/^[a-f0-9-]{36}$/.test(id)) return { error: 'bad run id' };
+  return (await kvs.get(RUN_KEY(id))) ?? null;
 }
 
 // ---------------------------------------------------------------------------

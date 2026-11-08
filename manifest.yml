@@ -336,17 +336,12 @@ modules:
       queue: evidence-drift
       function: fn-drift-worker
 
-    # Evaluation runs. Dev-only and token-gated; see src/evals.js.
+    # Evaluation runs, started from the register page in non-production
+    # environments only. No web trigger: an inbound URL would cost the app its
+    # Runs on Atlassian eligibility.
     - key: eval-consumer
       queue: precedent-evals
       function: fn-eval-worker
-
-  # Evaluation harness entry point. Public URL by platform design, so the
-  # handler fails closed: 404 in production and without the EVAL_TOKEN variable.
-  webtrigger:
-    - key: precedent-evals
-      function: fn-eval-trigger
-      urlFormat: v2
 
   scheduledTrigger:
     - key: staleness-sweep
@@ -394,8 +389,6 @@ modules:
       timeoutSeconds: 900
 
     # Evaluation harness
-    - key: fn-eval-trigger
-      handler: evals.evalTrigger
     - key: fn-eval-worker
       handler: evals.evalWorker
       timeoutSeconds: 900
