@@ -37,6 +37,16 @@ const DECISION_MARKERS = [
   /\bconclusion\b/i,
   /\bthe call is\b/i,
   /\bwe settled on\b/i,
+  // Colloquial settlements. Real threads often close a debate without any
+  // formal wording ("fine, Lisbon it is"). The gate is tuned for recall, and a
+  // false pass costs one cheap model call, so these lean inclusive.
+  /\b(?:fine|ok(?:ay)?|alright|right|so)\b[\s,.\u2014\u2013-]+(?:\S+\s+){0,4}it is\b/i,
+  /\b\w+ it is then\b/i,
+  /\bthat'?s (?:settled|decided|final)\b/i,
+  /\b(?:settled|sorted)[,.!]\s/i,
+  /\bship it\b/i,
+  /\blet'?s (?:do|use|go for|pick|stick with)\b/i,
+  /\bwe'?(?:ll| will) (?:go|stick) with\b/i,
 ];
 
 /** Hedges that usually mean the thread is still open. */

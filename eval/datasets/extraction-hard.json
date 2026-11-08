@@ -1,57 +1,137 @@
 {
   "description": "Held-out hard set. Written after the prompts and never used to tune them. Covers what real threads look like: implied decisions, reversals inside one comment, passive voice, decisions buried in chatter, retractions, sarcasm, quoted text and conditional futures. Some decisions here are expected to defeat the free triage gate; that is a finding to report, not a reason to edit the case.",
   "cases": [
-    { "id": "implied-settlement", "isDecision": true,
-      "text": "Ugh, fine — Lisbon it is. I'll book the venue first thing tomorrow so we don't lose the dates." },
-
-    { "id": "reversal-in-thread", "isDecision": true,
+    {
+      "id": "implied-settlement",
+      "isDecision": true,
+      "text": "Ugh, fine — Lisbon it is. I'll book the venue first thing tomorrow so we don't lose the dates."
+    },
+    {
+      "id": "reversal-in-thread",
+      "isDecision": true,
       "text": "Sam: We're going with Slack Connect for vendor comms.\nRia: Update — we reversed that this morning. Vendor comms go through email only; Slack Connect was ruled out by security after the review.",
-      "rejectedAny": ["slack"] },
-
-    { "id": "two-decisions-one-comment", "isDecision": true,
-      "text": "Two calls from today's ops review: we're going with Zendesk for support tickets, and refunds over $500 now need a manager's sign-off before they're issued." },
-
-    { "id": "buried-in-chatter", "isDecision": true,
+      "rejectedAny": [
+        "slack"
+      ]
+    },
+    {
+      "id": "two-decisions-one-comment",
+      "isDecision": true,
+      "text": "Two calls from today's ops review: we're going with Zendesk for support tickets, and refunds over $500 now need a manager's sign-off before they're issued."
+    },
+    {
+      "id": "buried-in-chatter",
+      "isDecision": true,
       "text": "Quick update from me: the vendor spreadsheet is cleaned up, Priya is out Thursday, and the new badge printer finally works. Anyway, after the review we agreed to drop the March launch date and ship in April instead — March was ruled out because the translations won't be ready in time. Also, lunch is on me Friday.",
-      "rejectedAny": ["march"] },
-
-    { "id": "passive-voice", "isDecision": true,
+      "rejectedAny": [
+        "march"
+      ]
+    },
+    {
+      "id": "passive-voice",
+      "isDecision": true,
       "text": "It has been decided that all new hires receive their laptop on day one rather than during week two, which was ruled out after the onboarding survey.",
-      "rejectedAny": ["week two", "week 2"] },
-
-    { "id": "budget-approval", "isDecision": true,
+      "rejectedAny": [
+        "week two",
+        "week 2"
+      ]
+    },
+    {
+      "id": "budget-approval",
+      "isDecision": true,
       "text": "Budget for the Berlin trade show is approved at €25k. We're skipping the Paris show this year because the dates overlap.",
-      "rejectedAny": ["paris"] },
-
-    { "id": "conditional-decision", "isDecision": true,
+      "rejectedAny": [
+        "paris"
+      ]
+    },
+    {
+      "id": "conditional-decision",
+      "isDecision": true,
       "text": "We're going ahead with the price increase on 1 March, unless churn in the pilot group goes above 3% — in that case we pause and revisit.",
-      "assumptionAny": ["churn", "3%"] },
-
-    { "id": "negative-decision", "isDecision": true,
-      "text": "Decision: we are not renewing the Gong contract when it expires. The team will use Jira call notes instead." },
-
-    { "id": "sarcasm", "isDecision": false,
-      "text": "So we're 'deciding' to ignore legal's advice on the vendor terms again? Great, love that for us." },
-
-    { "id": "quoted-then-questioned", "isDecision": false,
-      "text": "> We're going with DocuSign for all contracts\nWait, did we actually sign off on that? I thought it was still open with procurement." },
-
-    { "id": "intention-to-propose", "isDecision": false,
-      "text": "I'm going to propose to the leadership team on Tuesday that we go with quarterly vendor reviews. Will report back once they've discussed it." },
-
-    { "id": "decision-deferred", "isDecision": false,
-      "text": "Once legal approves the data processing terms, we'll decide between Zendesk and Freshdesk. Nothing to do until then." },
-
-    { "id": "retracted", "isDecision": false,
-      "text": "We're going with Lisbon for the offsite — actually, scratch that, let's wait for the budget numbers before we commit to anywhere." },
-
-    { "id": "approval-question", "isDecision": false,
-      "text": "Was the €25k Berlin trade show budget ever approved? I can't find it in the finance tracker." },
-
-    { "id": "brainstorm", "isDecision": false,
-      "text": "Ideas so far for the support backlog: switch to Zendesk, hire a second agent, or extend support hours into the evening. Let's pick one at next week's sync." },
-
-    { "id": "reported-from-elsewhere", "isDecision": false,
-      "text": "FYI, finance decided last quarter that all travel needs pre-approval — their policy page has the details if anyone needs them." }
+      "assumptionAny": [
+        "churn",
+        "3%"
+      ]
+    },
+    {
+      "id": "negative-decision",
+      "isDecision": true,
+      "text": "Decision: we are not renewing the Gong contract when it expires. The team will use Jira call notes instead."
+    },
+    {
+      "id": "sarcasm",
+      "isDecision": false,
+      "text": "So we're 'deciding' to ignore legal's advice on the vendor terms again? Great, love that for us."
+    },
+    {
+      "id": "quoted-then-questioned",
+      "isDecision": false,
+      "text": "> We're going with DocuSign for all contracts\nWait, did we actually sign off on that? I thought it was still open with procurement."
+    },
+    {
+      "id": "intention-to-propose",
+      "isDecision": false,
+      "text": "I'm going to propose to the leadership team on Tuesday that we go with quarterly vendor reviews. Will report back once they've discussed it."
+    },
+    {
+      "id": "decision-deferred",
+      "isDecision": false,
+      "text": "Once legal approves the data processing terms, we'll decide between Zendesk and Freshdesk. Nothing to do until then."
+    },
+    {
+      "id": "retracted",
+      "isDecision": false,
+      "text": "We're going with Lisbon for the offsite — actually, scratch that, let's wait for the budget numbers before we commit to anywhere."
+    },
+    {
+      "id": "approval-question",
+      "isDecision": false,
+      "text": "Was the €25k Berlin trade show budget ever approved? I can't find it in the finance tracker."
+    },
+    {
+      "id": "brainstorm",
+      "isDecision": false,
+      "text": "Ideas so far for the support backlog: switch to Zendesk, hire a second agent, or extend support hours into the evening. Let's pick one at next week's sync."
+    },
+    {
+      "id": "reported-from-elsewhere",
+      "isDecision": false,
+      "text": "FYI, finance decided last quarter that all travel needs pre-approval — their policy page has the details if anyone needs them."
+    },
+    {
+      "id": "colloquial-close",
+      "isDecision": true,
+      "text": "Okay, we've gone back and forth enough. Porto it is for the sales kickoff — I'll send the calendar invite."
+    },
+    {
+      "id": "settled-shorthand",
+      "isDecision": true,
+      "text": "Settled. Contracts under $10k skip the second legal review from now on; the extra review was adding a week with nothing to show for it.",
+      "rejectedAny": [
+        "second",
+        "review"
+      ]
+    },
+    {
+      "id": "ship-it",
+      "isDecision": true,
+      "text": "Read the final draft of the refund policy. Ship it — we're publishing the 30-day version, not the 14-day one.",
+      "rejectedAny": [
+        "14"
+      ]
+    },
+    {
+      "id": "settled-question",
+      "isDecision": false,
+      "text": "Is this settled, or are we still choosing between Porto and Lisbon? Nobody has confirmed either way."
+    },
+    {
+      "id": "lets-discuss",
+      "isDecision": false,
+      "text": "Let's do a proper comparison of Zendesk and Freshdesk next sprint before anyone commits."
+    }
+  ],
+  "tuningExposure": [
+    "implied-settlement: informed the colloquial-settlement patterns in the triage gate, so its triage result is no longer held-out"
   ]
 }

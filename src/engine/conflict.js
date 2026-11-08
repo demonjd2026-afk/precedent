@@ -139,11 +139,19 @@ export async function classifyAgainstCandidates(text, candidates, scopeKey) {
     return { findings: [], checked: 0, silent: true };
   }
 
-  const ranked = candidates
+  // Word overlap ranks candidates; it must not decide which ones the model may
+  // see. A proposal that paraphrases a decision ("have the lawyers mark up each
+  // supplier's own paperwork" vs "custom redlines") shares no words with it, so
+  // a lexical cut-off silently drops exactly the conflicts that matter most.
+  // When the register fits the budget, the model sees all of it. Only above the
+  // budget does overlap decide what is cut.
+  const scored = candidates
     .map((d) => ({ decision: d, score: recallScore(text, d) }))
-    .filter((c) => c.score > 0.05)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, MAX_CANDIDATES);
+    .sort((a, b) => b.score - a.score);
+  const ranked =
+    scored.length <= MAX_CANDIDATES
+      ? scored
+      : scored.filter((c) => c.score > 0.05).slice(0, MAX_CANDIDATES);
 
   if (ranked.length === 0) {
     log.info('conflict check: no lexical candidates', { scope: scopeKey, pool: candidates.length });
