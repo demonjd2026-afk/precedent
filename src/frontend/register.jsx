@@ -401,7 +401,12 @@ function App() {
     key: d.id,
     cells: [
       { key: d.sequence ?? d.id, content: <Strong>{d.id}</Strong> },
-      { key: `t-${d.id}`, content: <Text>{d.title}</Text> },
+      {
+        key: `t-${d.id}`,
+        content: (d.tags ?? []).includes('sample')
+          ? <Inline space="space.100" alignBlock="center"><Text>{d.title}</Text><Lozenge>Sample</Lozenge></Inline>
+          : <Text>{d.title}</Text>,
+      },
       { key: d.scope, content: <Text>{d.scope}</Text> },
       { key: d.decidedAt ?? '', content: <Text>{d.decidedAt?.slice(0, 10)}</Text> },
       { key: `o-${d.id}`, content: <Button appearance="link" onClick={() => setOpen(d.id)}>View</Button> },

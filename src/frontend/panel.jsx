@@ -76,6 +76,7 @@ function Proposal({ d, onDone }) {
         <Inline space="space.100" alignBlock="center">
           <Strong>{d.id}</Strong>
           <StatusLozenge status="proposed" label="Awaiting confirmation" />
+          {(d.tags ?? []).includes('sample') && <Lozenge>Sample</Lozenge>}
         </Inline>
         <Text>{d.title}</Text>
 
@@ -173,6 +174,7 @@ function DecisionLine({ d }) {
       <Inline space="space.100" alignBlock="center">
         <Strong>{d.id}</Strong>
         <StatusLozenge status={d.status} label={d.statusLabel} />
+        {(d.tags ?? []).includes('sample') && <Lozenge>Sample</Lozenge>}
       </Inline>
       <Text>{d.title}</Text>
       {d.status === 'stale' && d.staleDetail && <Text><Em>{d.staleDetail}</Em></Text>}
