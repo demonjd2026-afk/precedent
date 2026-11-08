@@ -56,7 +56,8 @@ test('datasets are well formed', () => {
   for (const c of conflict.cases) {
     for (const [id, rel] of Object.entries(c.expect)) {
       assert.ok(registerIds.has(id), `${c.id} references unknown ${id}`);
-      assert.ok(['contradicts', 'depends_on'].includes(rel), `${c.id} has bad relationship ${rel}`);
+      const allowed = Array.isArray(rel) ? rel : [rel];
+      for (const r of allowed) assert.ok(['contradicts', 'depends_on', 'none'].includes(r), `${c.id} has bad relationship ${r}`);
     }
   }
   assert.ok(conflict.cases.some((c) => Object.keys(c.expect).length === 0), 'need unrelated controls');
@@ -135,4 +136,21 @@ test('threshold check reports failures and passes a clean report', () => {
     conflict: { contradictionRecall: 1, falseAlarmRate: 0, silenceOnUnrelated: 1, errors: [] },
   });
   assert.deepEqual(passing, []);
+});
+
+test('conflict scorer accepts any listed outcome for an ambiguous pair', () => {
+  const dataset = { register: [{ id: 'DR-1' }], cases: [
+    { id: 'silent-ok', expect: { 'DR-1': ['depends_on', 'none'] } },
+    { id: 'depends-ok', expect: { 'DR-1': ['depends_on', 'none'] } },
+    { id: 'wrong', expect: { 'DR-1': ['depends_on', 'none'] } },
+  ] };
+  const s = scoreConflict(dataset, {
+    'silent-ok': { findings: [] },
+    'depends-ok': { findings: [{ decisionId: 'DR-1', relationship: 'depends_on' }] },
+    wrong: { findings: [{ decisionId: 'DR-1', relationship: 'contradicts' }] },
+  });
+  assert.equal(s.counts.ambiguousPairs, 3);
+  assert.equal(s.ambiguousAgreement, 2 / 3);
+  assert.equal(s.falseAlarmRate, null, 'ambiguous pairs are not unrelated pairs');
+  assert.equal(s.misses.length, 1);
 });

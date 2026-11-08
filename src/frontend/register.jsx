@@ -156,24 +156,32 @@ function Metric({ label, value, min, max }) {
   );
 }
 
-function Scorecard({ report }) {
-  const T = report.thresholds;
+function Scorecard({ report, heldOut = false }) {
+  // Held-out results show as measurements without pass/fail: no thresholds.
+  const T = heldOut ? { triage: {}, extraction: {}, conflict: {} } : report.thresholds;
   const e = report.extraction;
   const c = report.conflict;
   const t = report.triage;
   return (
     <Stack space="space.200">
-      <SectionMessage appearance={report.passed ? 'success' : 'warning'}
-        title={report.passed ? 'All thresholds met' : `${report.failures.length} threshold(s) missed`}>
-        <Text>Finished {report.finishedAt?.slice(0, 19).replace('T', ' ')} UTC in {report.durationSeconds}s.</Text>
-        {report.failures?.map((f) => <Text key={f}>• {f}</Text>)}
-      </SectionMessage>
+      {heldOut ? (
+        <SectionMessage appearance="information" title="Held-out hard set — measured, not gated">
+          <Text>Written after the prompts and never used to tune them. These numbers estimate real-world performance.</Text>
+        </SectionMessage>
+      ) : (
+        <SectionMessage appearance={report.passed ? 'success' : 'warning'}
+          title={report.passed ? 'All thresholds met' : `${report.failures.length} threshold(s) missed`}>
+          <Text>Finished {report.finishedAt?.slice(0, 19).replace('T', ' ')} UTC in {report.durationSeconds}s.</Text>
+          {report.failures?.map((f) => <Text key={f}>• {f}</Text>)}
+        </SectionMessage>
+      )}
 
       {t && (
         <Stack space="space.075">
           <Strong>Triage gate — free, runs before any model call</Strong>
           <Metric label="of real decisions kept" value={t.recall} min={T.triage.recall} />
           <Text>{t.modelCallsAvoided} model calls avoided on this dataset.</Text>
+          {t.missed?.length > 0 && <Text><Em>Dropped before the model: {t.missed.join(', ')}</Em></Text>}
         </Stack>
       )}
 
@@ -198,6 +206,7 @@ function Scorecard({ report }) {
           <Metric label="of dependencies caught" value={c.dependencyRecall} />
           <Metric label="false alarm rate" value={c.falseAlarmRate} max={T.conflict.falseAlarmRate} />
           <Metric label="of unrelated proposals left alone" value={c.silenceOnUnrelated} min={T.conflict.silenceOnUnrelated} />
+          {c.ambiguousAgreement != null && <Metric label="agreement on ambiguous pairs" value={c.ambiguousAgreement} />}
           {c.alarms.map((a) => <Text key={`${a.case}-${a.decision}`}><Em>False alarm: {a.case} → {a.decision} ({a.got})</Em></Text>)}
           {c.misses.map((m) => <Text key={`${m.case}-${m.decision}`}><Em>Missed: {m.case} → {m.decision} (wanted {m.want}, got {m.got})</Em></Text>)}
         </Stack>
@@ -238,7 +247,7 @@ function Evaluation() {
   return (
     <Stack space="space.150">
       <Heading size="small">Evaluation</Heading>
-      <Text>Scores the live model against labelled datasets. Development only; about 36 model calls per run.</Text>
+      <Text>Scores the live model against labelled datasets. Development only; about 60 model calls per run, including the held-out hard set.</Text>
       <Inline space="space.100" alignBlock="center">
         <Button appearance="primary" isDisabled={active} onClick={start}>
           {active ? 'Running…' : 'Run evaluation'}
@@ -249,6 +258,7 @@ function Evaluation() {
       {error && <SectionMessage appearance="error"><Text>{error}</Text></SectionMessage>}
       {run?.status === 'failed' && <SectionMessage appearance="error" title="Run failed"><Text>{run.error}</Text></SectionMessage>}
       {run?.status === 'complete' && <Scorecard report={run} />}
+      {run?.status === 'complete' && run.heldOut && <Scorecard report={{ ...run.heldOut }} heldOut />}
     </Stack>
   );
 }

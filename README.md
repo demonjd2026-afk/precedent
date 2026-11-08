@@ -88,6 +88,8 @@ An LLM feature without evaluation is a claim. Precedent's model-backed steps are
 | Conflict check | Contradictions caught | ≥ 80% | The core promise of the product |
 | Conflict check | False alarms across every proposal × decision pair | ≤ 5% | A guard that cries wolf gets muted |
 
+Alongside the tuning sets sits a **held-out hard set** (`*-hard.json`) written after the prompts and never used to tune them: implied decisions ("fine, Lisbon it is"), reversals within one comment, retractions, sarcasm, quoted text, paraphrased conflicts and partial exceptions. Its results are reported as measurements, not gated by thresholds, because gating on a held-out set invites tuning to it. Where reasonable readers could disagree on a label, the case lists every acceptable outcome rather than forcing one.
+
 The datasets include deliberate traps: comments that use decision words without settling anything ("has anyone decided…?", "if we decided to…", "as decided in DR-4"), and proposals that share vocabulary with a decision without conflicting with it.
 
 **Offline** (no model, runs anywhere, part of `npm test`): the triage gate against the dataset, plus unit tests proving the scorer computes what it claims.

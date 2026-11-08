@@ -1,0 +1,15 @@
+{
+  "description": "Held-out hard conflict cases, run against the register in conflict.json. Proposals clash through paraphrase rather than shared vocabulary, carve out partial exceptions, or share vocabulary without conflicting. Where reasonable readers could disagree, `expect` lists every acceptable outcome and 'none' means staying silent is also correct.",
+  "cases": [
+    { "id": "paraphrased-redlines", "text": "Have the lawyers mark up each supplier's own paperwork for deals below fifty thousand dollars.", "expect": { "DR-1": "contradicts" } },
+    { "id": "partial-exception", "text": "Use Adobe Sign just for the two marketing agreements that need its template features; everything else stays where it is.", "expect": { "DR-2": "contradicts" } },
+    { "id": "sixty-minute-promise", "text": "Promise enterprise customers a reply within 60 minutes in the new contract template.", "expect": { "DR-4": "contradicts" } },
+    { "id": "indirect-ad-shift", "text": "Pause the LinkedIn campaign and put the Q1 launch money into display banners on Google's network.", "expect": { "DR-6": "contradicts" } },
+    { "id": "conditional-reevaluation", "text": "If DocuSign raises prices at renewal, run a comparison of other e-signature tools.", "expect": { "DR-2": ["depends_on", "none"] } },
+    { "id": "template-logo", "text": "Update the DocuSign envelope template with the new company logo.", "expect": { "DR-2": ["depends_on", "none"] } },
+    { "id": "dynamo-side-project", "text": "Benchmark DynamoDB for the new analytics side project. This has nothing to do with the ledger.", "expect": {} },
+    { "id": "small-expense", "text": "Approve the $4,000 conference trip expense for the design team.", "expect": { "DR-5": ["depends_on", "none"] } },
+    { "id": "sla-faq", "text": "Write a customer FAQ explaining what our enterprise response-time commitment is.", "expect": { "DR-4": ["depends_on", "none"] } },
+    { "id": "unrelated-procurement", "text": "Renew the office cleaning contract for another year at the same rate.", "expect": {} }
+  ]
+}

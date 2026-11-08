@@ -128,6 +128,7 @@ export function scoreConflict(dataset, results) {
   let dependsExpected = 0, dependsFound = 0;
   let unrelatedPairs = 0, falseAlarms = 0, wrongRelationship = 0;
   let quietCases = 0, quietCorrect = 0;
+  let ambiguousPairs = 0, ambiguousCorrect = 0;
   const alarms = [];
   const misses = [];
   const errors = [];
@@ -148,6 +149,20 @@ export function scoreConflict(dataset, results) {
     for (const id of ids) {
       const want = c.expect[id];
       const got = reported.get(id);
+
+      // An array lists every acceptable outcome for a genuinely ambiguous pair,
+      // with 'none' meaning silence is also fine. Any listed outcome scores as
+      // correct; anything else is a miss (or a false alarm, if 'none' was the
+      // only acceptable answer).
+      if (Array.isArray(want)) {
+        ambiguousPairs += 1;
+        const outcome = got ?? 'none';
+        if (want.includes(outcome)) ambiguousCorrect += 1;
+        else if (got && !want.some((w) => w !== 'none')) { falseAlarms += 1; alarms.push({ case: c.id, decision: id, got }); }
+        else misses.push({ case: c.id, decision: id, want: want.join(' | '), got: outcome });
+        continue;
+      }
+
       if (want === 'contradicts') {
         contradictionsExpected += 1;
         if (got === 'contradicts') contradictionsFound += 1;
@@ -170,8 +185,9 @@ export function scoreConflict(dataset, results) {
     dependencyRecall: ratio(dependsFound, dependsExpected),
     falseAlarmRate: ratio(falseAlarms, unrelatedPairs),
     silenceOnUnrelated: ratio(quietCorrect, quietCases),
+    ambiguousAgreement: ratio(ambiguousCorrect, ambiguousPairs),
     wrongRelationship,
-    counts: { contradictionsExpected, contradictionsFound, dependsExpected, dependsFound, unrelatedPairs, falseAlarms },
+    counts: { contradictionsExpected, contradictionsFound, dependsExpected, dependsFound, unrelatedPairs, falseAlarms, ambiguousPairs },
     alarms,
     misses,
     errors,

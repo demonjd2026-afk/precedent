@@ -150,8 +150,16 @@ export async function getDecision(payload) {
     statusLabel: describeStatus(d),
     unconfirmed: d.status === STATUS.PROPOSED,
     rejected: d.rejected ?? [],
-    assumptions: d.assumptions ?? [],
-    deciders: d.deciders ?? [],
+    // Recheck dates are suggested by the model at capture time, not stated by
+    // the people who decided. Label them so the agent never presents a derived
+    // date as part of what the team said.
+    assumptions: (d.assumptions ?? []).map((x) => ({
+      text: x.text,
+      ...(x.expiresAt ? { suggestedRecheckBy: x.expiresAt.slice(0, 10) } : {}),
+    })),
+    suggestedReviewBy: d.reviewAt ? d.reviewAt.slice(0, 10) : undefined,
+    // The person who posted the decision. Usually a decider, not always the only one.
+    recordedBy: d.deciders ?? [],
     decidedAt: d.decidedAt,
     scope: d.scopeKey,
     tags: d.tags ?? [],

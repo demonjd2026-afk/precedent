@@ -24,12 +24,14 @@ import { triage } from './engine/detect.js';
 import { scoreTriage, scoreExtraction, scoreConflict, checkThresholds, THRESHOLDS } from '../eval/score.js';
 import extractionData from '../eval/datasets/extraction.json';
 import conflictData from '../eval/datasets/conflict.json';
+import extractionHardData from '../eval/datasets/extraction-hard.json';
+import conflictHardData from '../eval/datasets/conflict-hard.json';
 import { log } from './lib/log.js';
 
 const evalQueue = new Queue({ key: 'precedent-evals' });
 const RUN_KEY = (id) => `precedent:eval:run:${id}`;
 const LATEST_KEY = 'precedent:eval:latest';
-const SUITES = ['extraction', 'conflict'];
+const SUITES = ['extraction', 'conflict', 'extraction-hard', 'conflict-hard'];
 const CONCURRENCY = 3;
 
 // ---------------------------------------------------------------------------
@@ -94,8 +96,8 @@ async function pool(items, worker) {
   return out;
 }
 
-async function runExtraction() {
-  const cases = extractionData.cases;
+async function runExtraction(dataset = extractionData) {
+  const cases = dataset.cases;
   const outputs = await pool(cases, async (c) => {
     const { record, reason } = await extractDecision(
       {
@@ -122,18 +124,20 @@ async function runExtraction() {
   return { extraction: scoreExtraction(cases, results), triage: scoreTriage(cases, proceeded) };
 }
 
-async function runConflict() {
+async function runConflict(dataset = conflictData) {
+  // Hard cases are judged against the same register as the base set.
+  const full = { register: conflictData.register, cases: dataset.cases };
   const register = conflictData.register.map((d) => ({
     ...d,
     statement: d.statement ?? d.title,
     evidence: [],
   }));
-  const outputs = await pool(conflictData.cases, async (c) => {
+  const outputs = await pool(full.cases, async (c) => {
     const { findings } = await classifyAgainstCandidates(c.text, register, 'EVAL');
     return { findings: findings.map((f) => ({ decisionId: f.decisionId, relationship: f.relationship, confidence: f.confidence })) };
   });
-  const results = Object.fromEntries(conflictData.cases.map((c, i) => [c.id, outputs[i]]));
-  return { conflict: scoreConflict(conflictData, results) };
+  const results = Object.fromEntries(full.cases.map((c, i) => [c.id, outputs[i]]));
+  return { conflict: scoreConflict(full, results) };
 }
 
 export async function evalWorker(event) {
@@ -147,6 +151,19 @@ export async function evalWorker(event) {
   try {
     if (suites.includes('extraction')) Object.assign(report, await runExtraction());
     if (suites.includes('conflict')) Object.assign(report, await runConflict());
+
+    // Held-out sets are measured, not gated: they were written after the
+    // prompts and must never be used to tune them, so a threshold on them
+    // would invite exactly that.
+    const heldOut = {};
+    if (suites.includes('extraction-hard')) {
+      const r = await runExtraction(extractionHardData);
+      heldOut.extraction = r.extraction;
+      heldOut.triage = r.triage;
+    }
+    if (suites.includes('conflict-hard')) heldOut.conflict = (await runConflict(conflictHardData)).conflict;
+    if (Object.keys(heldOut).length > 0) report.heldOut = heldOut;
+
     report.failures = checkThresholds(report);
     report.passed = report.failures.length === 0;
     report.status = 'complete';
