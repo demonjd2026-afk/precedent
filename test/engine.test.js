@@ -11,6 +11,7 @@ import assert from 'node:assert/strict';
 
 import { triage, adfToText } from '../src/engine/detect.js';
 import { normalise, similarity, classifyDrift } from '../src/lib/hash.js';
+import { inScope } from '../src/lib/store.js';
 import { quoteIsGrounded } from '../src/lib/grounding.js';
 import { validateDecision, buildDecision, describeStatus, evidenceMatches, STATUS, STALE_REASON } from '../src/lib/model.js';
 
@@ -254,4 +255,14 @@ test('log budget resets between invocations', async () => {
     console.log = original;
     console.warn = originalWarn;
   }
+});
+
+// ---------------------------------------------------------------------------
+// Scope: regression for cross-project conflict warnings
+// ---------------------------------------------------------------------------
+
+test('a decision binds its own scope and org-wide decisions bind everywhere', () => {
+  assert.equal(inScope({ scopeKey: 'SALES' }, 'SALES'), true);
+  assert.equal(inScope({ scopeKey: 'GLOBAL' }, 'SALES'), true);
+  assert.equal(inScope({ scopeKey: 'LEO' }, 'SALES'), false, "Legal's decisions must not bind Sales' work");
 });

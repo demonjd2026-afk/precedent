@@ -171,13 +171,13 @@ export async function listBinding(hardLimit = 1000) {
 }
 
 /**
- * Candidate set for retrieval.
+ * The decisions that can bind work in a given scope.
  *
- * Deliberately simple: pull the citable records for a scope (plus global ones),
- * and let the ranking layer in search.js do the semantic work. Forge KVS has no
- * vector search, so the honest design is a cheap recall step followed by a
- * model-scored precision step over a bounded candidate list — not a pretence
- * of embedding search we cannot actually run here.
+ * A decision binds its own project or space, plus anything recorded as
+ * org-wide. Decisions from other projects are excluded: Legal's e-signature
+ * call does not constrain Sales' work, and including it produced duplicate
+ * warnings for the same clash. Without a scope (an agent asked a general
+ * question), the whole register applies.
  *
  * @param {string} [scopeKey]
  */
@@ -188,13 +188,12 @@ export async function listCandidates(scopeKey) {
   const all = [...binding, ...stale, ...superseded];
 
   if (!scopeKey) return all;
+  return all.filter((d) => inScope(d, scopeKey));
+}
 
-  // Scope-matched first, then global, then everything else. The ranker sees
-  // all of them but order is a useful prior when we truncate.
-  const scoped = all.filter((d) => d.scopeKey === scopeKey);
-  const global = all.filter((d) => d.scopeKey === 'GLOBAL' || d.scopeKey === 'UNSCOPED');
-  const rest = all.filter((d) => !scoped.includes(d) && !global.includes(d));
-  return [...scoped, ...global, ...rest];
+/** Org-wide decisions apply everywhere; everything else binds only its own scope. */
+export function inScope(decision, scopeKey) {
+  return decision.scopeKey === scopeKey || decision.scopeKey === 'GLOBAL';
 }
 
 /**

@@ -42,14 +42,24 @@ const quote = xcss({
   paddingLeft: 'space.100',
 });
 
-function StatusLozenge({ status, label }) {
+// Tags stay short; the full reason is shown as text beside them.
+const SHORT_LABEL = {
+  binding: 'Binding',
+  stale: 'Needs review',
+  superseded: 'Superseded',
+  proposed: 'Awaiting confirmation',
+  rejected: 'Not a decision',
+};
+
+function StatusLozenge({ status }) {
+  const label = SHORT_LABEL[status] ?? status;
   const appearance =
     status === 'binding' ? 'success'
     : status === 'stale' ? 'moved'
     : status === 'superseded' ? 'default'
     : status === 'proposed' ? 'new'
     : 'default';
-  return <Lozenge appearance={appearance}>{label ?? status}</Lozenge>;
+  return <Lozenge appearance={appearance}>{label}</Lozenge>;
 }
 
 // ---------------------------------------------------------------------------

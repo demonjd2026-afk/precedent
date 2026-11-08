@@ -121,7 +121,8 @@ function recallScore(text, decision) {
  * @returns {Promise<{findings: Finding[], checked: number, silent: boolean}>}
  */
 export async function checkConflicts(text, scopeKey) {
-  const candidates = await listCandidates(scopeKey);
+  // Superseded decisions no longer bind anything, so they cannot conflict.
+  const candidates = (await listCandidates(scopeKey)).filter((d) => d.status !== 'superseded');
   return classifyAgainstCandidates(text, candidates, scopeKey);
 }
 

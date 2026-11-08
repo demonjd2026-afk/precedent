@@ -56,7 +56,7 @@ function Detail({ id, onClose }) {
         <Inline space="space.100" alignBlock="center" spread="space-between">
           <Inline space="space.100" alignBlock="center">
             <Heading size="small">{d.id}</Heading>
-            <Lozenge appearance={lozengeFor(d.status)}>{d.statusLabel}</Lozenge>
+            <Lozenge appearance={lozengeFor(d.status)}>{{ binding: 'Binding', stale: 'Needs review', superseded: 'Superseded', proposed: 'Awaiting confirmation', rejected: 'Not a decision' }[d.status] ?? d.status}</Lozenge>
           </Inline>
           <Button appearance="subtle" onClick={onClose}>Close</Button>
         </Inline>
