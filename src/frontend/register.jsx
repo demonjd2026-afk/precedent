@@ -417,10 +417,8 @@ function App() {
 
   return (
     <Stack space="space.300">
-      <Stack space="space.050">
-        <Heading size="large">Decision register</Heading>
-        <Text>What this team has decided, why, and whether it still stands.</Text>
-      </Stack>
+      {/* Jira renders the page title from the manifest; repeating it here duplicates it. */}
+      <Text>What this team has decided, why, and whether it still stands.</Text>
 
       <SampleData onChange={() => setVersion((v) => v + 1)} />
 
