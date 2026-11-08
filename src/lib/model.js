@@ -209,3 +209,19 @@ export function describeStatus(d) {
       return 'Unknown';
   }
 }
+
+/**
+ * Does this evidence come from the given issue or page?
+ *
+ * Comment evidence is recorded as "ISSUE-KEY:COMMENT-ID", so a decision
+ * captured from a comment on LEO-13 must match a lookup for "LEO-13". An exact
+ * comparison misses every comment-sourced decision, which is almost all of them.
+ *
+ * @param {{sourceId?: string}} evidence
+ * @param {string} key  An issue key, a page id, or a full "ISSUE:COMMENT" id.
+ */
+export function evidenceMatches(evidence, key) {
+  const id = evidence?.sourceId;
+  if (!id || !key) return false;
+  return id === key || id.startsWith(`${key}:`);
+}

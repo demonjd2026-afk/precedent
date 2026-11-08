@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import { triage, adfToText } from '../src/engine/detect.js';
 import { normalise, similarity, classifyDrift } from '../src/lib/hash.js';
 import { quoteIsGrounded } from '../src/lib/grounding.js';
-import { validateDecision, buildDecision, describeStatus, STATUS, STALE_REASON } from '../src/lib/model.js';
+import { validateDecision, buildDecision, describeStatus, evidenceMatches, STATUS, STALE_REASON } from '../src/lib/model.js';
 
 // ---------------------------------------------------------------------------
 // Triage: the free gate in front of the paid model call
@@ -212,4 +212,20 @@ test('grounding folds curly double quotes and dashes', () => {
 test('grounding still rejects a fabricated quote', () => {
   const source = 'We\u2019ve decided to use the standard mutual NDA template.';
   assert.equal(quoteIsGrounded("We've decided to negotiate custom terms for every vendor", source), false);
+});
+
+// ---------------------------------------------------------------------------
+// Source matching: regression for the empty issue panel
+// ---------------------------------------------------------------------------
+
+test('a decision captured from a comment matches its issue', () => {
+  assert.equal(evidenceMatches({ sourceId: 'LEO-13:84904' }, 'LEO-13'), true);
+  assert.equal(evidenceMatches({ sourceId: 'LEO-13' }, 'LEO-13'), true);
+  assert.equal(evidenceMatches({ sourceId: 'LEO-13:84904' }, 'LEO-13:84904'), true);
+});
+
+test('source matching does not leak across similar issue keys', () => {
+  assert.equal(evidenceMatches({ sourceId: 'LEO-130:1' }, 'LEO-13'), false);
+  assert.equal(evidenceMatches({ sourceId: 'LEO-1:5' }, 'LEO-13'), false);
+  assert.equal(evidenceMatches({}, 'LEO-13'), false);
 });

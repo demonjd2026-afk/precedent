@@ -12,7 +12,7 @@
  */
 
 import { kvs, WhereConditions, FilterConditions, Filter } from '@forge/kvs';
-import { STATUS, validateDecision } from './model.js';
+import { STATUS, validateDecision, evidenceMatches } from './model.js';
 import { log } from './log.js';
 import { toEntity } from './schema.js';
 
@@ -204,7 +204,7 @@ export async function listCandidates(scopeKey) {
 export async function listProposals(sourceId) {
   const proposals = await listByStatus(STATUS.PROPOSED);
   if (!sourceId) return proposals;
-  return proposals.filter((d) => (d.evidence ?? []).some((e) => e.sourceId === sourceId));
+  return proposals.filter((d) => (d.evidence ?? []).some((e) => evidenceMatches(e, sourceId)));
 }
 
 /**
