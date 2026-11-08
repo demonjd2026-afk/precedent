@@ -330,15 +330,11 @@ modules:
   consumer:
     - key: capture-consumer
       queue: decision-capture
-      resolver:
-        function: fn-capture-worker
-        method: capture-event
+      function: fn-capture-worker
 
     - key: drift-consumer
       queue: evidence-drift
-      resolver:
-        function: fn-drift-worker
-        method: drift-event
+      function: fn-drift-worker
 
   scheduledTrigger:
     - key: staleness-sweep

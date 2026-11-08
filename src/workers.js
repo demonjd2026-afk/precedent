@@ -7,7 +7,6 @@
  * path stays short by pushing to here.
  */
 
-import Resolver from '@forge/resolver';
 import { allocateId, putDecision, getDecision, listCitingSource } from './lib/store.js';
 import { extractDecision } from './engine/extract.js';
 import { checkEvidenceDrift, markStale, runSweep } from './engine/staleness.js';
@@ -15,20 +14,21 @@ import { syncDecisionToGraph } from './connector.js';
 import { log } from './lib/log.js';
 
 /**
- * @forge/events v3 wraps pushed data as { body }. Accept either shape so a
- * platform change in delivery cannot silently drop every event.
+ * Async event consumers (@forge/events 2.x+) are plain functions invoked with
+ * an AsyncEvent; the pushed data lives on `event.body`. Resolvers are no
+ * longer used for consumers — declaring one is what makes the queue service
+ * reject pushes with a 400.
  */
-function eventBody(payload) {
-  if (payload && typeof payload.body === 'object' && payload.body !== null) return payload.body;
-  return payload ?? {};
+function eventBody(event) {
+  if (event && typeof event.body === 'object' && event.body !== null) return event.body;
+  return {};
 }
 
 // ---------------------------------------------------------------------------
 // Capture worker
 // ---------------------------------------------------------------------------
-const captureResolver = new Resolver();
-
-captureResolver.define('capture-event', async ({ payload }) => {
+export async function captureWorker(event) {
+  const payload = event;
   const {
     text,
     sourceType,
@@ -79,16 +79,13 @@ captureResolver.define('capture-event', async ({ payload }) => {
   log.info('decision captured', { id: record.id, sourceId, scope: record.scopeKey });
 
   return { ok: true, captured: true, id: record.id };
-});
-
-export const captureWorker = captureResolver.getDefinitions();
+}
 
 // ---------------------------------------------------------------------------
 // Drift worker — runs when a cited source is edited
 // ---------------------------------------------------------------------------
-const driftResolver = new Resolver();
-
-driftResolver.define('drift-event', async ({ payload }) => {
+export async function driftWorker(event) {
+  const payload = event;
   const { decisionIds = [], sourceId } = eventBody(payload);
   let flagged = 0;
 
@@ -111,9 +108,7 @@ driftResolver.define('drift-event', async ({ payload }) => {
 
   log.info('drift check complete', { sourceId, examined: decisionIds.length, flagged });
   return { ok: true, flagged };
-});
-
-export const driftWorker = driftResolver.getDefinitions();
+}
 
 // ---------------------------------------------------------------------------
 // Daily staleness sweep

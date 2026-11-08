@@ -43,6 +43,13 @@ export async function onJiraActivity(event) {
     const isComment = eventType.includes('commented');
     const comment = event?.comment;
 
+    // Issue-updated events do not include the summary or description, so there
+    // is nothing to triage. Only comments carry decision text in the payload.
+    if (!isComment) {
+      log.info('skipping non-comment event', { issueKey, eventType });
+      return;
+    }
+
     const text = isComment
       ? adfToText(comment?.body)
       : [issue?.fields?.summary, adfToText(issue?.fields?.description)].filter(Boolean).join('\n\n');
