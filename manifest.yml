@@ -343,6 +343,8 @@ modules:
       resolver:
         function: fn-panel-resolver
       title: Precedent
+      # Hosted on-platform from the icon bundle (static/icons, which needs its
+      # index.html). Shown inside Jira's "View app actions" menu.
       icon: resource:connector-icons;icon-light.svg
 
   jira:globalPage:
