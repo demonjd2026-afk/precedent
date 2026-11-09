@@ -346,7 +346,7 @@ export async function supersedeDecision(payload, context) {
     confirmedBy: context?.accountId,
   });
 
-  log.info('decision superseded', { oldId, newId, by: context?.accountId });
+  log.info('decision superseded', { oldId, newId });
 
   return {
     ok: true,

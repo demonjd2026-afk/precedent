@@ -2,37 +2,25 @@
 
 Written for someone who has never seen this app and is working on their own empty Atlassian site. Every step is listed, including the ones that are easy to assume.
 
-**Time required: about 10 minutes**, most of it waiting for a deploy.
+**Time required: about 5 minutes.**
 
 ---
 
-## What you need first
+## What you need
 
-- An Atlassian Cloud site with **Jira**. Confluence is optional; Precedent reaches it through the Teamwork Graph. A free developer site works: run `forge site provision` if you don't have one.
-- **Rovo** available on that site, for the agent and MCP parts. Provisioned developer sites include Rovo.
-- **Node.js 20 or later** (`node --version`).
-- **Site admin** on the site you're installing to. Precedent requests Teamwork Graph scopes, and only an admin can grant those.
+- An Atlassian Cloud site with **Jira**, and **site admin** rights on it. Precedent asks for Teamwork Graph scopes, which only an admin can grant.
+- **Rovo** on the site, for the chat agent and MCP tools. Everything else works without it.
+- At least one Jira project (space) to try it in.
 
 ---
 
-## 1. Install the app
+## 1. Install
 
-```bash
-npm install -g @forge/cli
-forge login          # paste an API token from id.atlassian.com/manage/api-tokens
+1. **[Install Precedent](https://developer.atlassian.com/console/install/25ffbde5-7905-491b-8f9f-1bce3fed7de9?signature=AYABeInqYya8ByMXcw4YBGLgVF8AAAADAAdhd3Mta21zAEthcm46YXdzOmttczp1cy13ZXN0LTI6NzA5NTg3ODM1MjQzOmtleS83MDVlZDY3MC1mNTdjLTQxYjUtOWY5Yi1lM2YyZGNjMTQ2ZTcAuAECAQB4CxqLTo9l4lqXuFjNim1xJM%2Bp%2F3TVP9xHS2BrU5DRRucBXN%2BOulQ785B%2BkUrEE%2FjUtAAAAH4wfAYJKoZIhvcNAQcGoG8wbQIBADBoBgkqhkiG9w0BBwEwHgYJYIZIAWUDBAEuMBEEDNbiCL%2FbGasHpP8mzAIBEIA7gIMeGJ%2BCX3Y2L%2BkFZPjWDed39gofsLoHwkBYNpPIScQoU%2B51WPCX8LF5CK6ZHOAtWzNGefB8XPIkCFMAB2F3cy1rbXMAS2Fybjphd3M6a21zOmV1LXdlc3QtMTo3MDk1ODc4MzUyNDM6a2V5LzQ2MzBjZTZiLTAwYzMtNGRlMi04NzdiLTYyN2UyMDYwZTVjYwC4AQICAHi9bVMAkme4qVQX1fQHo6ePw3H40A7cGfz7yrmSfBWMXgFRl3PWIJkGsZXuRwgdp%2BQSAAAAfjB8BgkqhkiG9w0BBwagbzBtAgEAMGgGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQM%2Byyos819DVTx4ezqAgEQgDufHBtMjt%2FLQs5LCSU3kqW6uF3oI0TQI0Ud5XbWlBW5Bcu2HpVuBsG8Wb8Pho%2FfZclOsiiLmx7pqwp3eAAHYXdzLWttcwBLYXJuOmF3czprbXM6dXMtZWFzdC0xOjcwOTU4NzgzNTI0MzprZXkvNmMxMjBiYTAtNGNkNS00OTg1LWI4MmUtNDBhMDQ5NTJjYzU3ALgBAgIAeDYASx0XCjkny4iLV6vz%2BKtEGSGT6kdt0QRpkn6D%2FlVEAWVNRcfZcrfUJmXTqbKX3D0AAAB%2BMHwGCSqGSIb3DQEHBqBvMG0CAQAwaAYJKoZIhvcNAQcBMB4GCWCGSAFlAwQBLjARBAw8X2xljMWjqZALKvACARCAO5bHM5qXUtzKc2dbJjm0S%2Bi684ZSmBPMZkBN1FqYMNK7n8cCrC6HQbQN39LeB1gOmeOGi6H4mldfPSHfAgAAAAAMAAAQAAAAAAAAAAAAAAAAACYeEED7geT1zVsitbfGRI%2F%2F%2F%2F%2F%2FAAAAAQAAAAAAAAAAAAAAAQAAADIc85bGy5KKNwDXSageurFp4gxnaOpTCeCKwGZaR1%2FmH31NSTiUUWESifxl6vzHOmGYjp2hd12pGyG%2BYzcV3fkzwy4%3D&product=jira)**, signed in as a site admin.
+2. Choose your site and **Jira**, then **Get app**.
+3. Review the permissions and accept them all. A declined Teamwork Graph permission does not cause an error: it returns empty results, so the app looks fine but shows less.
 
-git clone <repository-url> precedent
-cd precedent
-npm install
-
-forge register       # creates your own app id and writes it into manifest.yml
-forge deploy
-forge install
-```
-
-When `forge install` asks which product, **select Jira**. Precedent is a single Jira installation by design, so the decision register stays one register.
-
-You will be shown the list of scopes. Accept all of them. The Teamwork Graph scopes are the ones that matter most — a declined graph scope returns *empty results rather than an error*, so the app will appear to work and quietly show you nothing.
+It takes about a minute. Precedent then appears under **Apps → Decision register**, and as a panel on every work item, reached through **View app actions** (the hexagon button under a work item's title).
 
 ---
 
@@ -134,3 +122,21 @@ Something edited the source pages. Open any flagged record to see exactly which 
 
 **`forge deploy` fails on the manifest.**
 Run `forge lint`. The Preview modules (`rovo:skill`, `rovo:mcp`) and the Teamwork Graph connector require a current CLI — `npm install -g @forge/cli@latest`.
+
+---
+
+## Build from source (optional)
+
+For reviewing or modifying the code rather than trying the app.
+
+```bash
+npm install -g @forge/cli
+forge login
+git clone https://github.com/demonjd2026-afk/precedent.git
+cd precedent
+npm install
+forge register      # creates your own app id in manifest.yml
+forge deploy
+forge install       # choose Jira
+npm test            # 54 tests, no Atlassian site needed
+```

@@ -400,6 +400,12 @@ modules:
       function: fn-staleness-sweep
       interval: day
 
+    # Required of apps that store Atlassian account IDs: report them to the
+    # Personal Data Reporting API and erase accounts reported as closed.
+    - key: privacy-report
+      function: fn-privacy-report
+      interval: week
+
   # =========================================================================
   # FUNCTIONS
   # Async consumers opt into long timeouts; everything else stays short.
@@ -448,6 +454,11 @@ modules:
     # Sample data
     - key: fn-seed-worker
       handler: seed.seedWorker
+      timeoutSeconds: 300
+
+    # Personal data reporting
+    - key: fn-privacy-report
+      handler: privacy.reportPersonalData
       timeoutSeconds: 300
 
     # Teamwork Graph connector lifecycle

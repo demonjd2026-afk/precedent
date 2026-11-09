@@ -47,7 +47,8 @@ export function enforceGrounding(claims, source, getQuote) {
   if (dropped.length > 0) {
     log.warn('dropped ungrounded claims', {
       count: dropped.length,
-      sample: getQuote(dropped[0]),
+      // Lengths only: quotes are customer content and must not reach developer logs.
+      quoteLengths: dropped.map((c) => (getQuote(c) ?? '').length).join(','),
     });
   }
   return { kept, dropped };

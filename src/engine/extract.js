@@ -153,9 +153,10 @@ export async function extractDecision(input, allocatedId) {
     (c) => c.quote
   );
   if (decisionGrounded.kept.length === 0) {
+    // Diagnostics only: never log customer text, which the developer can read.
     log.warn('rejected extraction: decision quote not found in source', {
       sourceId: input.sourceId,
-      quote: args.decisionQuote,
+      quoteLength: (args.decisionQuote ?? '').length,
     });
     return { record: null, reason: 'the quoted decision text does not appear in the source' };
   }

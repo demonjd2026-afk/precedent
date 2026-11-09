@@ -121,7 +121,7 @@ panel.define('confirmDecision', async ({ payload, context }) => {
 
   // Now that a human stands behind it, publish to the graph.
   const sync = await syncDecisionToGraph(updated);
-  log.info('decision confirmed', { id: decisionId, by: context?.accountId, synced: sync.synced });
+  log.info('decision confirmed', { id: decisionId, synced: sync.synced });
 
   return { ok: true, decision: summarise(updated), synced: sync.synced };
 });
