@@ -9,8 +9,14 @@ Written for someone who has never seen this app and is working on their own empt
 ## What you need
 
 - An Atlassian Cloud site with **Jira**, and **site admin** rights on it. Precedent asks for Teamwork Graph scopes, which only an admin can grant.
-- **Rovo** on the site, for the chat agent and MCP tools. Everything else works without it.
 - At least one Jira project (space) to try it in.
+- **Rovo** on the site for steps 4 and 6 only (the chat agent and MCP tools). Rovo is not part of Jira's Free plan: if your site shows **Upgrade** where **Ask Rovo** would be, skip those steps. Developer sites created with `forge site provision` include Rovo.
+
+| Works on any Jira Cloud site, including Free | Needs Rovo |
+|---|---|
+| Decision capture from comments, confirmation, the decision register, the conflict check, staleness, sample data | The Precedent agent in Rovo Chat; MCP tools for external AI clients |
+
+All of Precedent's own AI runs on Atlassian-hosted models through Forge, so the core features need no Rovo licence.
 
 ---
 
@@ -65,7 +71,7 @@ This is the core of the product: not that it found the decision, but that nobody
 
 ---
 
-## 4. Try the agent
+## 4. Try the agent (needs Rovo)
 
 Open **Rovo Chat** (the Chat button in the Jira or Confluence top bar) and select the **Precedent** agent. Ask:
 
@@ -89,7 +95,7 @@ On connect, every confirmed decision is backfilled into the graph. Search for a 
 
 ---
 
-## 6. Optional — MCP from your own editor
+## 6. Optional — MCP from your own editor (needs Rovo)
 
 Lets you ask what constrains a piece of work from Claude or Cursor, before writing code.
 
