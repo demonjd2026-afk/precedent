@@ -89,9 +89,12 @@ panel.define('checkThisIssue', async ({ payload, context }) => {
 
   // Say which decisions were skipped because they were made on this issue, so
   // a silent result is never mistaken for "nothing was looked at".
-  const own = ownDecisions ?? [];
+  const own = [...(ownDecisions ?? [])].sort(
+    (a, b) => Number(a.replace(/\D/g, '')) - Number(b.replace(/\D/g, ''))
+  );
+  const ownList = own.length > 1 ? `${own.slice(0, -1).join(', ')} and ${own.at(-1)}` : own[0];
   const ownNote = own.length
-    ? ` ${own.join(', ')} ${own.length === 1 ? 'was' : 'were'} decided on this issue, so ${own.length === 1 ? 'it was' : 'they were'} not checked against it.`
+    ? ` ${ownList} ${own.length === 1 ? 'was' : 'were'} decided on this issue, so ${own.length === 1 ? 'it was' : 'they were'} not checked against it.`
     : '';
 
   return {
