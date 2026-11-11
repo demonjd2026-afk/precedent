@@ -83,16 +83,28 @@ panel.define('checkThisIssue', async ({ payload, context }) => {
     return { findings: [], summary: 'This issue has too little text to check. Add a description first.' };
   }
 
-  const { findings, checked, silent } = await checkConflicts(text, projectKey);
+  const { findings, checked, silent, ownDecisions } = await checkConflicts(text, projectKey, {
+    sourceKey: issueKey,
+  });
+
+  // Say which decisions were skipped because they were made on this issue, so
+  // a silent result is never mistaken for "nothing was looked at".
+  const own = ownDecisions ?? [];
+  const ownNote = own.length
+    ? ` ${own.join(', ')} ${own.length === 1 ? 'was' : 'were'} decided on this issue, so ${own.length === 1 ? 'it was' : 'they were'} not checked against it.`
+    : '';
 
   return {
     findings,
     checked,
-    summary: silent
-      ? checked === 0
-        ? 'No recorded decisions apply to this project yet.'
-        : `Checked against ${checked} decision${checked === 1 ? '' : 's'} — nothing conflicts.`
-      : `${findings.length} thing${findings.length === 1 ? '' : 's'} to look at.`,
+    summary:
+      (silent
+        ? checked === 0
+          ? own.length
+            ? 'No other recorded decisions apply to this project yet.'
+            : 'No recorded decisions apply to this project yet.'
+          : `Checked against ${checked} decision${checked === 1 ? '' : 's'} — nothing conflicts.`
+        : `${findings.length} thing${findings.length === 1 ? '' : 's'} to look at.`) + ownNote,
   };
 });
 

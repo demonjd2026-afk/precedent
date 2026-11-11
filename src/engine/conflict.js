@@ -18,7 +18,7 @@
 
 import { MODELS, callStructured, clampSource, recordUsage } from '../lib/llm.js';
 import { listCandidates } from '../lib/store.js';
-import { STATUS } from '../lib/model.js';
+import { STATUS, partitionBySource } from '../lib/model.js';
 import { log } from '../lib/log.js';
 
 /** Below this, we do not show the user anything. */
@@ -120,10 +120,13 @@ function recallScore(text, decision) {
  * @param {string} [scopeKey]
  * @returns {Promise<{findings: Finding[], checked: number, silent: boolean}>}
  */
-export async function checkConflicts(text, scopeKey) {
+export async function checkConflicts(text, scopeKey, { sourceKey } = {}) {
   // Superseded decisions no longer bind anything, so they cannot conflict.
-  const candidates = (await listCandidates(scopeKey)).filter((d) => d.status !== 'superseded');
-  return classifyAgainstCandidates(text, candidates, scopeKey);
+  const live = (await listCandidates(scopeKey)).filter((d) => d.status !== 'superseded');
+  // Decisions recorded on the item being checked are its answer, not a conflict.
+  const { kept, excluded } = partitionBySource(live, sourceKey);
+  const result = await classifyAgainstCandidates(text, kept, scopeKey);
+  return { ...result, ownDecisions: excluded.map((d) => d.id) };
 }
 
 /**

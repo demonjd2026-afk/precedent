@@ -225,3 +225,25 @@ export function evidenceMatches(evidence, key) {
   if (!id || !key) return false;
   return id === key || id.startsWith(`${key}:`);
 }
+
+/**
+ * Drop decisions that were captured from the work item being checked.
+ *
+ * An issue cannot contradict a decision that was made on it. Without this, an
+ * issue whose description still asks the open question ("decide how often we
+ * review vendors") is flagged against the answer recorded in its own comments.
+ *
+ * @param {DecisionRecord[]} decisions
+ * @param {string} [sourceKey]  Jira issue key being checked, e.g. "KAN-9".
+ * @returns {{kept: DecisionRecord[], excluded: DecisionRecord[]}}
+ */
+export function partitionBySource(decisions, sourceKey) {
+  if (!sourceKey) return { kept: decisions, excluded: [] };
+  const kept = [];
+  const excluded = [];
+  for (const d of decisions) {
+    const own = (d.evidence ?? []).some((e) => evidenceMatches(e, sourceKey));
+    (own ? excluded : kept).push(d);
+  }
+  return { kept, excluded };
+}

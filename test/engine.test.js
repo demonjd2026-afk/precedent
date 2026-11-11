@@ -13,7 +13,7 @@ import { triage, adfToText } from '../src/engine/detect.js';
 import { normalise, similarity, classifyDrift } from '../src/lib/hash.js';
 import { inScope } from '../src/lib/store.js';
 import { quoteIsGrounded } from '../src/lib/grounding.js';
-import { validateDecision, buildDecision, describeStatus, evidenceMatches, STATUS, STALE_REASON } from '../src/lib/model.js';
+import { validateDecision, buildDecision, describeStatus, evidenceMatches, partitionBySource, STATUS, STALE_REASON } from '../src/lib/model.js';
 
 // ---------------------------------------------------------------------------
 // Triage: the free gate in front of the paid model call
@@ -265,4 +265,22 @@ test('a decision binds its own scope and org-wide decisions bind everywhere', ()
   assert.equal(inScope({ scopeKey: 'SALES' }, 'SALES'), true);
   assert.equal(inScope({ scopeKey: 'GLOBAL' }, 'SALES'), true);
   assert.equal(inScope({ scopeKey: 'LEO' }, 'SALES'), false, "Legal's decisions must not bind Sales' work");
+});
+
+// ---------------------------------------------------------------------------
+// Self-conflict: regression for an issue flagged against its own decision
+// ---------------------------------------------------------------------------
+
+test('an issue is never checked against a decision made on it', () => {
+  const own = { id: 'DR-6', evidence: [{ sourceId: 'KAN-9:10021' }] };
+  const other = { id: 'DR-2', evidence: [{ sourceId: 'KAN-3:10004' }] };
+  const lookalike = { id: 'DR-7', evidence: [{ sourceId: 'KAN-90:10050' }] };
+  const { kept, excluded } = partitionBySource([own, other, lookalike], 'KAN-9');
+  assert.deepEqual(excluded.map((d) => d.id), ['DR-6']);
+  assert.deepEqual(kept.map((d) => d.id), ['DR-2', 'DR-7'], 'KAN-90 is a different issue from KAN-9');
+});
+
+test('without a source key nothing is excluded', () => {
+  const ds = [{ id: 'DR-1', evidence: [{ sourceId: 'KAN-1' }] }];
+  assert.deepEqual(partitionBySource(ds, undefined), { kept: ds, excluded: [] });
 });
