@@ -19,6 +19,17 @@ Precedent is a Forge app that runs entirely on Atlassian's platform:
 
 Vulnerabilities in Atlassian's own platform should be reported to Atlassian: https://www.atlassian.com/trust/security/report-a-vulnerability
 
+## Incident response
+
+If a security incident or a critical vulnerability affects Precedent, I follow Atlassian's Marketplace guidelines (https://developer.atlassian.com/platform/marketplace/app-security-incident-management-guidelines/):
+
+1. **Contain.** Stop the harm first: deploy a fix, or disable the affected feature or the app's production environment.
+2. **Notify Atlassian** through the Marketplace security channel as soon as the incident is confirmed, and **notify affected customers** using Atlassian's vulnerability notification template.
+3. **Fix and verify.** Ship the fix within Atlassian's security bug fix policy timelines (https://developer.atlassian.com/platform/marketplace/security-bugfix-policy/), and confirm it with a test that reproduces the problem.
+4. **Review.** Publish a short summary of what happened, what was affected and what changed, and record the lessons in this repository.
+
+Because the app stores data only in Forge storage on each customer's site and makes no calls outside Atlassian, an incident is limited to the app's own behaviour on a site. There is no separate database or server of mine to breach.
+
 ## Supported versions
 
 Only the latest version is supported. Forge deploys updates to every installation automatically.

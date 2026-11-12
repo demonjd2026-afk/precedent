@@ -247,3 +247,39 @@ export function partitionBySource(decisions, sourceKey) {
   }
   return { kept, excluded };
 }
+
+const PROJECT_KEY = /^[A-Z][A-Z0-9_]{1,19}$/;
+const ISSUE_KEY = /^([A-Z][A-Z0-9_]{1,19})-\d+/;
+
+/**
+ * The Jira projects a decision draws on: the project it binds, and the project
+ * of every issue it quotes from. Non-project scopes (GLOBAL, UNSCOPED) and
+ * hand-entered evidence contribute nothing.
+ *
+ * @param {DecisionRecord} d
+ * @returns {string[]}
+ */
+export function projectKeysOf(d) {
+  const keys = new Set();
+  if (d?.scopeKey && PROJECT_KEY.test(d.scopeKey) && !['GLOBAL', 'UNSCOPED'].includes(d.scopeKey)) {
+    keys.add(d.scopeKey);
+  }
+  for (const e of d?.evidence ?? []) {
+    const m = ISSUE_KEY.exec(e?.sourceId ?? '');
+    if (m) keys.add(m[1]);
+  }
+  return [...keys];
+}
+
+/**
+ * Whether a user who can browse `browsable` projects may see this decision.
+ * They must be able to see every project it draws on, because the record
+ * quotes content from those projects.
+ *
+ * @param {DecisionRecord} d
+ * @param {Set<string>} browsable
+ * @returns {boolean}
+ */
+export function visibleTo(d, browsable) {
+  return projectKeysOf(d).every((k) => browsable.has(k));
+}

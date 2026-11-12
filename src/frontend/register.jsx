@@ -46,9 +46,16 @@ function lozengeFor(status) {
 }
 
 function Detail({ id, onClose }) {
-  const [d, setD] = useState(null);
+  const [d, setD] = useState(undefined);
   useEffect(() => { invoke('getFullDecision', { decisionId: id }).then(setD); }, [id]);
-  if (!d) return <Spinner />;
+  if (d === undefined) return <Spinner />;
+  if (d === null) {
+    return (
+      <SectionMessage appearance="warning" title={`${id} is not available`}>
+        <Text>It may have been removed, or it comes from a project you don't have access to.</Text>
+      </SectionMessage>
+    );
+  }
 
   return (
     <Box xcss={detailBox}>

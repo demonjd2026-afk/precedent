@@ -32,6 +32,7 @@ import { extractDecision } from './engine/extract.js';
 import { dueForReview } from './engine/staleness.js';
 import { triage } from './engine/detect.js';
 import { log } from './lib/log.js';
+import { visibilityFilter } from './lib/access.js';
 
 /**
  * Forge delivers action inputs on the payload. Older samples nest them under
@@ -91,6 +92,8 @@ export async function searchDecisions(payload) {
 
   let pool = status ? await listByStatus(status) : await listCandidates(scope);
   if (scope && !status) pool = pool.filter((d) => d.scopeKey === scope || d.scopeKey === 'GLOBAL');
+  // Only decisions from projects the person asking can browse in Jira.
+  pool = pool.filter(await visibilityFilter());
 
   if (pool.length === 0) {
     return {
@@ -138,7 +141,9 @@ export async function getDecision(payload) {
   if (!decisionId) return { summary: 'Which decision? Give me an id such as DR-14.', found: false };
 
   const d = await loadDecision(String(decisionId).trim().toUpperCase());
-  if (!d) {
+  // A decision the person cannot see is reported exactly like a missing one,
+  // so the answer does not reveal that it exists.
+  if (!d || !(await visibilityFilter())(d)) {
     return { summary: `No decision with id ${decisionId} exists in the register.`, found: false };
   }
 
@@ -186,7 +191,9 @@ export async function checkConflict(payload) {
     };
   }
 
-  const { findings, checked, silent } = await checkConflicts(String(text), scope);
+  const { findings, checked, silent } = await checkConflicts(String(text), scope, {
+    visible: await visibilityFilter(),
+  });
 
   if (silent) {
     return {
@@ -277,9 +284,10 @@ export async function captureDecision(payload, context) {
 export async function listStale(payload) {
   const { scope } = inputsOf(payload);
 
-  const flagged = await listByStatus(STATUS.STALE);
+  const visible = await visibilityFilter();
+  const flagged = (await listByStatus(STATUS.STALE)).filter(visible);
   const scoped = scope ? flagged.filter((d) => d.scopeKey === scope) : flagged;
-  const due = await dueForReview(scope);
+  const due = (await dueForReview(scope)).filter(visible);
 
   // A decision can be both flagged and past its review date; show it once.
   const seen = new Set(scoped.map((d) => d.id));
@@ -327,10 +335,14 @@ export async function supersedeDecision(payload, context) {
     return { summary: 'A decision cannot supersede itself.', ok: false };
   }
 
-  const [older, newer] = await Promise.all([loadDecision(oldId), loadDecision(newId)]);
+  const [older, newer, visible] = await Promise.all([
+    loadDecision(oldId),
+    loadDecision(newId),
+    visibilityFilter(),
+  ]);
 
-  if (!older) return { summary: `${oldId} is not in the register.`, ok: false };
-  if (!newer) return { summary: `${newId} is not in the register.`, ok: false };
+  if (!older || !visible(older)) return { summary: `${oldId} is not in the register.`, ok: false };
+  if (!newer || !visible(newer)) return { summary: `${newId} is not in the register.`, ok: false };
 
   if (older.status === STATUS.SUPERSEDED) {
     return {

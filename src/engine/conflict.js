@@ -120,9 +120,12 @@ function recallScore(text, decision) {
  * @param {string} [scopeKey]
  * @returns {Promise<{findings: Finding[], checked: number, silent: boolean}>}
  */
-export async function checkConflicts(text, scopeKey, { sourceKey } = {}) {
+export async function checkConflicts(text, scopeKey, { sourceKey, visible } = {}) {
   // Superseded decisions no longer bind anything, so they cannot conflict.
-  const live = (await listCandidates(scopeKey)).filter((d) => d.status !== 'superseded');
+  // Decisions the caller may not see are never sent to the model or reported.
+  const live = (await listCandidates(scopeKey))
+    .filter((d) => d.status !== 'superseded')
+    .filter((d) => (visible ? visible(d) : true));
   // Decisions recorded on the item being checked are its answer, not a conflict.
   const { kept, excluded } = partitionBySource(live, sourceKey);
   const result = await classifyAgainstCandidates(text, kept, scopeKey);

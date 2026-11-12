@@ -13,7 +13,7 @@ import { triage, adfToText } from '../src/engine/detect.js';
 import { normalise, similarity, classifyDrift } from '../src/lib/hash.js';
 import { inScope } from '../src/lib/store.js';
 import { quoteIsGrounded } from '../src/lib/grounding.js';
-import { validateDecision, buildDecision, describeStatus, evidenceMatches, partitionBySource, STATUS, STALE_REASON } from '../src/lib/model.js';
+import { validateDecision, buildDecision, describeStatus, evidenceMatches, partitionBySource, projectKeysOf, visibleTo, STATUS, STALE_REASON } from '../src/lib/model.js';
 
 // ---------------------------------------------------------------------------
 // Triage: the free gate in front of the paid model call
@@ -283,4 +283,26 @@ test('an issue is never checked against a decision made on it', () => {
 test('without a source key nothing is excluded', () => {
   const ds = [{ id: 'DR-1', evidence: [{ sourceId: 'KAN-1' }] }];
   assert.deepEqual(partitionBySource(ds, undefined), { kept: ds, excluded: [] });
+});
+
+// ---------------------------------------------------------------------------
+// Access: decisions are shown only to people who can browse every project they
+// draw on
+// ---------------------------------------------------------------------------
+
+test('a decision draws on its scope project and the projects of every quoted issue', () => {
+  const d = { scopeKey: 'SALES', evidence: [{ sourceId: 'SALES-4:100' }, { sourceId: 'LEGAL-9:200' }] };
+  assert.deepEqual(projectKeysOf(d).sort(), ['LEGAL', 'SALES']);
+});
+
+test('non-project scopes and manual evidence add no project', () => {
+  assert.deepEqual(projectKeysOf({ scopeKey: 'GLOBAL', evidence: [{ sourceId: 'manual:1731400000' }] }), []);
+  assert.deepEqual(projectKeysOf({ scopeKey: 'UNSCOPED' }), []);
+});
+
+test('a user sees a decision only if they can browse every project it draws on', () => {
+  const crossProject = { scopeKey: 'SALES', evidence: [{ sourceId: 'LEGAL-9:200' }] };
+  assert.equal(visibleTo(crossProject, new Set(['SALES'])), false, 'quotes a Legal issue the user cannot see');
+  assert.equal(visibleTo(crossProject, new Set(['SALES', 'LEGAL'])), true);
+  assert.equal(visibleTo({ scopeKey: 'LEGAL', evidence: [] }, new Set()), false, 'fails closed with no browsable projects');
 });

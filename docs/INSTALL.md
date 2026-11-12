@@ -93,6 +93,8 @@ Makes decisions appear in Atlassian Search and to other agents, not just in this
 
 On connect, every confirmed decision is backfilled into the graph. Search for a decision title in Atlassian Search to confirm.
 
+> **Before you connect, check who should see your decisions.** Decisions published through the connector are visible to **everyone on the site** in Atlassian Search and Rovo. The connector does not copy Jira project permissions. Inside the app itself (the panel, the Decision register, the Precedent agent and the MCP tools), each person only sees decisions from projects they can browse in Jira. If some projects are restricted, leave the connector off.
+
 ---
 
 ## 6. Optional — MCP from your own editor (needs Rovo)

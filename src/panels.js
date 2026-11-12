@@ -17,7 +17,8 @@ import {
   listProposals,
   patchDecision,
 } from './lib/store.js';
-import { STATUS, describeStatus } from './lib/model.js';
+import { STATUS, describeStatus, evidenceMatches } from './lib/model.js';
+import { visibilityFilter, hasProjectPermission } from './lib/access.js';
 import { checkConflicts } from './engine/conflict.js';
 import { syncDecisionToGraph, removeDecisionFromGraph, graphIndexStatus } from './connector.js';
 import { echo as graphEcho } from './lib/graph.js';
@@ -34,10 +35,14 @@ panel.define('getPanelData', async ({ context }) => {
   const issueKey = context?.extension?.issue?.key;
   const projectKey = context?.extension?.project?.key ?? scopeFromIssueKey(issueKey);
 
-  const [proposals, scoped] = await Promise.all([
+  const [proposals, all, visible] = await Promise.all([
     listProposals(issueKey),
     listByScope(projectKey, 100),
+    visibilityFilter(),
   ]);
+  // A decision in this project can still quote an issue from another project
+  // this person cannot see.
+  const scoped = all.filter(visible);
 
   const needsReview = scoped.filter((d) => d.status === STATUS.STALE);
   const binding = scoped.filter((d) => d.status === STATUS.BINDING);
@@ -85,6 +90,7 @@ panel.define('checkThisIssue', async ({ payload, context }) => {
 
   const { findings, checked, silent, ownDecisions } = await checkConflicts(text, projectKey, {
     sourceKey: issueKey,
+    visible: await visibilityFilter(),
   });
 
   // Say which decisions were skipped because they were made on this issue, so
@@ -116,10 +122,21 @@ panel.define('checkThisIssue', async ({ payload, context }) => {
  * model extracted becomes binding, citable or visible in org-wide search until
  * somebody presses this.
  */
+/**
+ * The panel may only act on decisions captured from the issue it is shown on.
+ * The person can see that issue (Jira only renders the panel for them), so
+ * this ties every confirm or reject to content they are allowed to see.
+ */
+function belongsToIssue(decision, issueKey) {
+  return Boolean(issueKey) && (decision?.evidence ?? []).some((e) => evidenceMatches(e, issueKey));
+}
+
 panel.define('confirmDecision', async ({ payload, context }) => {
   const { decisionId, edits } = payload ?? {};
   const existing = await getDecision(decisionId);
-  if (!existing) return { ok: false, error: `${decisionId} not found` };
+  if (!existing || !belongsToIssue(existing, context?.extension?.issue?.key)) {
+    return { ok: false, error: `${decisionId} is not a decision captured on this work item.` };
+  }
   if (existing.status !== STATUS.PROPOSED) {
     return { ok: false, error: `${decisionId} is already ${existing.status}` };
   }
@@ -145,7 +162,9 @@ panel.define('confirmDecision', async ({ payload, context }) => {
 panel.define('rejectProposal', async ({ payload, context }) => {
   const { decisionId, reason } = payload ?? {};
   const existing = await getDecision(decisionId);
-  if (!existing) return { ok: false, error: `${decisionId} not found` };
+  if (!existing || !belongsToIssue(existing, context?.extension?.issue?.key)) {
+    return { ok: false, error: `${decisionId} is not a decision captured on this work item.` };
+  }
 
   await patchDecision(decisionId, {
     status: STATUS.REJECTED,
@@ -170,14 +189,18 @@ const register = new Resolver();
 
 register.define('listRegister', async ({ payload }) => {
   const { status = STATUS.BINDING, scope } = payload ?? {};
-  let rows = await listByStatus(status);
+  // Only decisions from projects this person can browse in Jira.
+  const visible = await visibilityFilter();
+  const load = async (s) => (await listByStatus(s)).filter(visible);
+
+  let rows = await load(status);
   if (scope) rows = rows.filter((d) => d.scopeKey === scope);
 
   const [binding, stale, proposed, superseded] = await Promise.all([
-    listByStatus(STATUS.BINDING),
-    listByStatus(STATUS.STALE),
-    listByStatus(STATUS.PROPOSED),
-    listByStatus(STATUS.SUPERSEDED),
+    load(STATUS.BINDING),
+    load(STATUS.STALE),
+    load(STATUS.PROPOSED),
+    load(STATUS.SUPERSEDED),
   ]);
 
   return {
@@ -194,7 +217,7 @@ register.define('listRegister', async ({ payload }) => {
 
 register.define('getFullDecision', async ({ payload }) => {
   const d = await getDecision(payload?.decisionId);
-  if (!d) return null;
+  if (!d || !(await visibilityFilter())(d)) return null;
   return { ...d, statusLabel: describeStatus(d) };
 });
 
@@ -231,8 +254,22 @@ register.define('getEval', async ({ payload }) => getEvalRun(payload?.runId));
 
 register.define('seedStatus', async () => seedStatus());
 register.define('listProjects', async () => listProjects());
-register.define('loadSample', async ({ payload }) => requestLoad(payload?.projectKey));
-register.define('removeSample', async () => requestRemove());
+// Loading or removing sample data creates and deletes work items with the
+// app's own access, so it is limited to people who administer that project
+// (Jira administrators included).
+const NOT_ADMIN = 'Only a project administrator can load or remove sample data in that project.';
+
+register.define('loadSample', async ({ payload }) => {
+  const projectKey = payload?.projectKey;
+  if (!(await hasProjectPermission(projectKey, 'ADMINISTER_PROJECTS'))) return { error: NOT_ADMIN };
+  return requestLoad(projectKey);
+});
+
+register.define('removeSample', async () => {
+  const { projectKey } = await seedStatus();
+  if (!(await hasProjectPermission(projectKey, 'ADMINISTER_PROJECTS'))) return { error: NOT_ADMIN };
+  return requestRemove();
+});
 
 export const registerHandler = register.getDefinitions();
 
