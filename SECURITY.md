@@ -4,7 +4,7 @@
 
 Please don't report security problems in a public issue.
 
-Report them privately through GitHub: open https://github.com/demonjd2026-afk/precedent/security/advisories/new and describe the problem, how to reproduce it, and what it affects. You can also use the security contact email shown on the app's Marketplace listing.
+Report them privately through GitHub: open https://github.com/demonjd2026-afk/precedent/security/advisories/new and describe the problem, how to reproduce it, and what it affects. You can also email precedent.app.support@gmail.com.
 
 I'll acknowledge a report within 2 business days, keep you updated while it's investigated, and credit you when the fix ships unless you'd rather not be named.
 

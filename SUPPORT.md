@@ -6,7 +6,7 @@ Precedent is free and maintained by one developer, Jayanth Dolai. This page is t
 
 Open an issue at **https://github.com/demonjd2026-afk/precedent/issues**. Include what you did, what you expected, and what happened. Don't paste customer data, decision text or account ids into a public issue.
 
-For a security problem, open an issue titled "Security" without details, and I'll arrange a private channel.
+For a security problem, don't open a public issue. Follow [SECURITY.md](SECURITY.md) instead.
 
 ## Hours and response times
 
