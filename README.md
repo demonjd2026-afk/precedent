@@ -41,42 +41,9 @@ Atlassian's Teamwork Graph connects goals, work, people and content. Decisions a
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    subgraph IN["Where decisions happen"]
-        C["Jira comment<br/>on an issue"]
-        P["Issue panel<br/>Check this issue · Confirm"]
-        R["Decision register<br/>page"]
-    end
+![Precedent architecture](docs/architecture.png)
 
-    subgraph APP["Precedent (Forge, runs on Atlassian)"]
-        T["Trigger · 25 s<br/>regex triage gate<br/>no model call"]
-        W1["Capture worker · 300 s<br/>Claude Haiku via Forge LLM<br/>verbatim grounding check<br/>stored as PROPOSED"]
-        CF["Conflict check<br/>Claude Sonnet via Forge LLM<br/>silent below 0.6 confidence"]
-        SW["Daily sweep · 900 s<br/>expiry · evidence drift<br/>dangling references"]
-        AC["Access filter<br/>Jira permissions,<br/>checked as the user"]
-        S[("Forge storage<br/>entity: decision<br/>PROPOSED → BINDING → STALE / SUPERSEDED")]
-        A["Actions · shared tool layer<br/>search · get · check-conflict<br/>capture · list-stale · supersede"]
-    end
-
-    subgraph OUT["With Rovo (optional)"]
-        AG["Precedent agent<br/>+ 2 skills"]
-        MCP["MCP server<br/>4 read-only tools"]
-        TG["Teamwork Graph<br/>connector"]
-    end
-
-    C -->|"queue"| T --> W1 --> S
-    P --> CF --> AC
-    P -->|"confirm / reject"| S
-    R --> AC
-    AC --> S
-    SW --> S
-    AG --> A
-    MCP --> A
-    A --> AC
-    S -->|"confirmed decisions"| TG --> SEARCH["Atlassian Search<br/>other agents"]
-    MCP --> CLIENTS["Claude · Cursor<br/>other MCP clients"]
-```
+*Colours: amber = where people act in Jira · blue = pipeline stage and storage · green = human decision and outputs · red = guardrails enforced in code · purple = Forge LLM calls.*
 
 How a decision moves through the app:
 
