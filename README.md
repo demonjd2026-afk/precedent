@@ -6,6 +6,7 @@ Built with Atlassian Forge for [Codegeist 2026](https://codegeist2026.devpost.co
 
 - **Install:** [docs/INSTALL.md](docs/INSTALL.md) (installation link, 10 minutes, free Jira site is enough)
 - **Evaluation results and limitations:** [docs/EVALUATION.md](docs/EVALUATION.md)
+- **Marketplace:** submitted as *Precedent - Decision Memory for Jira*; in Atlassian's review
 - **Privacy:** [PRIVACY.md](PRIVACY.md) · **Security:** [SECURITY.md](SECURITY.md) · **Support:** [SUPPORT.md](SUPPORT.md)
 
 ---
@@ -22,8 +23,8 @@ Atlassian's Teamwork Graph connects goals, work, people and content. Decisions a
 |---|---|
 | **Captures** | When a Jira comment settles something, Precedent proposes a decision record: what was decided, which alternatives were rejected, which assumptions it rests on, and who said it. |
 | **Grounds** | Every field the model produces must quote the source comment word for word. Anything it cannot quote is dropped before it is stored. |
-| **Waits for a person** | Extracted records start as *proposed*. Only a person pressing **Confirm** makes a decision binding, citable by the agent, or visible in search. |
-| **Guards** | On any Jira issue, **Check this issue** compares the work against the project's binding decisions and names the one it would reverse, with the reason. Below a confidence floor it says nothing, and says so. |
+| **Waits for a person** | Extracted records start as *proposed*. Only a person pressing **Confirm decision** makes a decision binding, citable by the agent, or visible in search. |
+| **Guards** | On any Jira issue, **Check this issue against past decisions** compares the work against the project's binding decisions and names the one it would reverse, with the reason. Below a confidence floor it says nothing, and says so. |
 | **Reviews** | A daily sweep re-reads every source a binding decision cites. A decision is flagged *Needs review* when an assumption passes its recheck date, the cited comment has been edited in substance, or the cited issue no longer exists. |
 | **Shares** | With Rovo: a **Precedent** agent in Rovo Chat, four read-only **MCP tools** for assistants such as Claude or Cursor, and a **Teamwork Graph connector** that publishes confirmed decisions to Atlassian Search. |
 

@@ -23,7 +23,7 @@ The **held-out set** was written after the prompts and has never been used to tu
 
 Stated plainly, because a perfect score on a small dataset invites the wrong conclusion.
 
-- **The datasets are small.** 36 tuning and 36 held-out cases is enough to catch regressions and gross failures. It is not enough to claim a precise accuracy for production use.
+- **The datasets are small.** 36 tuning and 34 held-out cases is enough to catch regressions and gross failures. It is not enough to claim a precise accuracy for production use.
 - **The datasets were written by the developer.** They are not drawn from real customer threads.
 - **The free triage gate misses some colloquial decisions.** "Okay, we've gone back and forth enough. Porto it is." never reaches the model. The gate is a regular-expression cost filter, not a classifier, and patching it against held-out cases would only turn them into tuning cases. Anything it misses can still be recorded by asking the Precedent agent to "record this decision", which goes through the same grounding and human confirmation.
 - **One tuning-set false alarm is arguably correct.** "Order new laptops for the support team" was linked to "expense reports over $5,000 require CFO approval". A team's laptop order plausibly exceeds that limit. The case was labelled unrelated before the run, and it stays labelled that way. Relabelling after seeing a model answer is tuning.
